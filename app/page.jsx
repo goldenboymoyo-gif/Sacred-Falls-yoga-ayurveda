@@ -60,7 +60,7 @@ export default function Home() {
             <p className="script big">Begin where you are. Restore what is needed. Live in greater harmony.</p>
             <div className="row">
               <Link className="btn" href="/contact#book">Book a consultation</Link>
-              <Link className="textlink" href="#offerings">Explore our offerings ↓</Link>
+              <Link className="textlink" href="#offerings">Explore our offerings</Link>
             </div>
           </div>
           <div className="collage">
@@ -78,7 +78,7 @@ export default function Home() {
             <h2>Hello, I'm Sara Norton</h2>
             <p>I am a qualified Ayurveda Practitioner, Yoga Teacher and Yoga Therapist. My professional training took place in India, including in Rishikesh and Kerala, where I immersed myself in the study and practice of these traditional systems of wellbeing.</p>
             <p>My work is practical and compassionate, with a deep respect for each person’s individual nature.</p>
-            <Link className="textlink" href="/about">More about my work →</Link>
+            <Link className="textlink" href="/about">More about my work</Link>
           </div>
         </div>
       </section>
@@ -92,7 +92,7 @@ export default function Home() {
               <div>
                 <h3>{o.title}</h3>
                 {o.text.map((t) => <p key={t}>{t}</p>)}
-                <Link className="textlink" href={o.href}>{o.cta} →</Link>
+                <Link className="textlink" href={o.href}>{o.cta}</Link>
               </div>
             </div>
           ))}
