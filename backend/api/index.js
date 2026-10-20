@@ -8,7 +8,7 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "20kb" }));
 
 const origins = (process.env.ALLOWED_ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
-app.use(cors({ origin: (o, cb) => cb(null, !o || origins.length === 0 || origins.includes(o)), methods: ["GET", "POST"] }));
+app.use(cors({ origin: (o, cb) => cb(null, !o || origins.length === 0 || origins.includes(o)), methods: ["GET", "POST", "PUT", "PATCH", "OPTIONS"] }));
 
 const GH_API = process.env.GITHUB_API || "https://api.github.com";
 const cfg = () => ({ token: process.env.GITHUB_TOKEN, repo: process.env.GITHUB_REPO, branch: process.env.GITHUB_BRANCH || "main" });
@@ -92,6 +92,137 @@ app.get("/api/events", async (_req, res) => {
     res.set("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
     res.json(Array.isArray(list) ? list.slice(0, 30) : []);
   } catch { res.json([]); }
+});
+
+
+// ---------------------------------------------------------------------------
+// Admin (password protected). Data lives in the private GitHub data repo.
+// ---------------------------------------------------------------------------
+const hash = (x) => crypto.createHash("sha256").update(String(x ?? "")).digest();
+const hkey = () => crypto.createHash("sha256").update("sf-admin:" + (process.env.ADMIN_PASSWORD || "")).digest();
+const sign = (exp) => `${exp}.${crypto.createHmac("sha256", hkey()).update(String(exp)).digest("base64url")}`;
+function verify(token) {
+  if (!process.env.ADMIN_PASSWORD) return false;
+  const [p, sig] = String(token || "").split(".");
+  if (!p || !sig) return false;
+  const good = crypto.createHmac("sha256", hkey()).update(p).digest("base64url");
+  const a = Buffer.from(sig), b = Buffer.from(good);
+  return a.length === b.length && crypto.timingSafeEqual(a, b) && Number(p) > Date.now();
+}
+const auth = (req, res, next) => (verify((req.headers.authorization || "").replace(/^Bearer /, "")) ? next() : res.status(401).json({ error: "Not signed in" }));
+
+const loginHits = new Map();
+function loginLimited(ip) {
+  const now = Date.now(), win = 15 * 60 * 1000;
+  const arr = (loginHits.get(ip) || []).filter((t) => now - t < win);
+  arr.push(now); loginHits.set(ip, arr);
+  return arr.length > 10;
+}
+
+const JSON_HDR = { Accept: "application/vnd.github+json", "Content-Type": "application/json" };
+async function ghList(path) {
+  const r = await ghFetch(`${path}?ref=${encodeURIComponent(cfg().branch)}`, { headers: { Accept: "application/vnd.github+json" } });
+  if (r.status === 404) return [];
+  if (!r.ok) throw new Error("GitHub " + r.status);
+  const j = await r.json();
+  return Array.isArray(j) ? j : [];
+}
+async function readRaw(path) {
+  const r = await ghFetch(`${path}?ref=${encodeURIComponent(cfg().branch)}`, { headers: { Accept: "application/vnd.github.raw+json" } });
+  if (!r.ok) return null;
+  try { return await r.json(); } catch { return null; }
+}
+async function readJson(path, fallback) {
+  const r = await ghFetch(`${path}?ref=${encodeURIComponent(cfg().branch)}`, { headers: { Accept: "application/vnd.github+json" } });
+  if (r.status === 404) return { data: fallback, sha: null };
+  if (!r.ok) throw new Error("GitHub " + r.status);
+  const j = await r.json();
+  return { data: JSON.parse(Buffer.from(j.content, "base64").toString("utf8")), sha: j.sha };
+}
+async function writeJson(path, data, sha, message) {
+  const r = await ghFetch(path, {
+    method: "PUT", headers: JSON_HDR,
+    body: JSON.stringify({ message, branch: cfg().branch, content: Buffer.from(JSON.stringify(data, null, 2)).toString("base64"), ...(sha ? { sha } : {}) }),
+  });
+  if (!r.ok) throw new Error("GitHub " + r.status);
+}
+const ready = (_q, res, next) => (cfg().token && cfg().repo ? next() : res.status(500).json({ error: "Storage is not configured yet" }));
+const fail = (res, e) => { console.error(e.message); res.status(502).json({ error: "Could not reach the data store, please try again" }); };
+
+app.post("/api/admin/login", (req, res) => {
+  if (!process.env.ADMIN_PASSWORD) return res.status(503).json({ error: "Admin is not set up yet" });
+  if (loginLimited(req.ip)) return res.status(429).json({ error: "Too many attempts, try again later" });
+  if (!crypto.timingSafeEqual(hash(req.body && req.body.password), hash(process.env.ADMIN_PASSWORD))) return res.status(401).json({ error: "Wrong password" });
+  res.json({ token: sign(Date.now() + 12 * 3600 * 1000) });
+});
+
+// ---- bookings ----
+const STATUSES = ["new", "confirmed", "done", "archived"];
+app.get("/api/admin/bookings", auth, ready, async (_req, res) => {
+  try {
+    const months = (await ghList("bookings")).filter((d) => d.type === "dir").map((d) => d.name).sort().reverse();
+    let files = [];
+    for (const m of months) {
+      files = files.concat((await ghList("bookings/" + m)).filter((f) => f.name.endsWith(".json")).map((f) => f.path));
+      if (files.length >= 100) break;
+    }
+    files = files.sort().reverse().slice(0, 100);
+    const [list, st] = await Promise.all([Promise.all(files.map(readRaw)), readJson("data/booking-status.json", {})]);
+    const bookings = list.filter(Boolean).map((b) => ({ ...b, status: st.data[b.id] || "new" }));
+    res.json({ bookings });
+  } catch (e) { fail(res, e); }
+});
+app.patch("/api/admin/bookings/:id", auth, ready, async (req, res) => {
+  const id = String(req.params.id);
+  const status = String((req.body || {}).status);
+  if (!/^[a-f0-9]{8}$/.test(id) || !STATUSES.includes(status)) return res.status(400).json({ error: "Invalid request" });
+  try {
+    const { data, sha } = await readJson("data/booking-status.json", {});
+    data[id] = status;
+    await writeJson("data/booking-status.json", data, sha, `Booking ${id}: ${status}`);
+    res.json({ ok: true });
+  } catch (e) { fail(res, e); }
+});
+
+// ---- events ----
+const t = (v, n) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
+app.get("/api/admin/events", auth, ready, async (_req, res) => {
+  try { const { data } = await readJson("data/events.json", []); res.json({ events: Array.isArray(data) ? data : [] }); } catch (e) { fail(res, e); }
+});
+app.put("/api/admin/events", auth, ready, async (req, res) => {
+  const list = (req.body || {}).events;
+  if (!Array.isArray(list) || list.length > 50) return res.status(400).json({ error: "Invalid events" });
+  const events = list.map((e) => ({ title: t(e.title, 120), date: t(e.date, 60), location: t(e.location, 120), description: t(e.description, 600) })).filter((e) => e.title);
+  try {
+    const { sha } = await readJson("data/events.json", []);
+    await writeJson("data/events.json", events, sha, "Update events");
+    res.json({ ok: true, events });
+  } catch (e) { fail(res, e); }
+});
+
+// ---- site contact settings ----
+const cleanSettings = (b = {}) => ({
+  phone: t(b.phone, 40), email: t(b.email, 120), whatsapp: String(b.whatsapp ?? "").replace(/\D/g, "").slice(0, 20),
+  instagram: t(b.instagram, 60).replace(/^@/, "").replace(/[^A-Za-z0-9._]/g, ""),
+});
+app.get("/api/settings", async (_req, res) => {
+  if (!cfg().token || !cfg().repo) return res.json({});
+  try {
+    const d = await readRaw("data/settings.json");
+    res.set("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+    res.json(d && typeof d === "object" ? cleanSettings(d) : {});
+  } catch { res.json({}); }
+});
+app.get("/api/admin/settings", auth, ready, async (_req, res) => {
+  try { const { data } = await readJson("data/settings.json", {}); res.json({ settings: cleanSettings(data) }); } catch (e) { fail(res, e); }
+});
+app.put("/api/admin/settings", auth, ready, async (req, res) => {
+  const settings = cleanSettings((req.body || {}).settings);
+  try {
+    const { sha } = await readJson("data/settings.json", {});
+    await writeJson("data/settings.json", settings, sha, "Update contact settings");
+    res.json({ ok: true, settings });
+  } catch (e) { fail(res, e); }
 });
 
 module.exports = app;

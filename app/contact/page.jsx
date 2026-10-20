@@ -1,6 +1,6 @@
 import PageHead from "@/components/PageHead";
 import BookingForm from "@/components/BookingForm";
-import { site } from "@/lib/site";
+import ContactDetails from "@/components/ContactDetails";
 export const metadata = { title: "Contact & Booking", description: "Book a consultation or get in touch with Sacred Falls Ayurveda and Yoga in Victoria Falls, Zimbabwe." };
 export default function Page() {
   return (<>
@@ -13,8 +13,7 @@ export default function Page() {
       </div>
       <div>
         <h2>Contact</h2>
-        <p><strong>{site.name}</strong><br />{site.location}<br />Consultations available in person and online</p>
-        <p>{site.email && <>Email: {site.email}<br /></>}Telephone and WhatsApp: <a href={`https://wa.me/${site.whatsapp}`}>{site.phone}</a>{site.instagram && <><br />Instagram: <a href={`https://instagram.com/${site.instagram}`}>@{site.instagram}</a></>}</p>
+        <ContactDetails />
       </div>
     </div></section>
   </>);
