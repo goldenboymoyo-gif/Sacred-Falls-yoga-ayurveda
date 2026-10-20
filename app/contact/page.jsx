@@ -5,7 +5,7 @@ export const metadata = { title: "Contact & Booking", description: "Book a consu
 export default function Page() {
   return (<>
     <PageHead eyebrow="Contact" title="Book or get in touch">Consultations available in person and online.</PageHead>
-    <section id="book"><div className="wrap" style={{ display: "grid", gap: 48, gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))" }}>
+    <section id="book"><div className="wrap" style={{ display: "grid", gap: 48, gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))" }}>
       <div>
         <h2>Booking request</h2>
         <p>Share a few details and Sara will get back to you to confirm a time.</p>
