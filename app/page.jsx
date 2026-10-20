@@ -52,11 +52,11 @@ export default function Home() {
     <>
       <section className="hero2">
         <div className="wrap hero2grid">
-          <div>
+          <div className="herotext">
             <p className="script">Sacred Falls Ayurveda and Yoga</p>
             <h1>Return to your natural rhythm</h1>
             <p>Sacred Falls Ayurveda and Yoga offers a gentle, practical path towards greater balance, vitality and ease. Drawing on the ancient wisdom of Ayurveda and Yoga Therapy, Sara Norton supports each person to understand their unique constitution and create nourishing, sustainable practices for everyday life.</p>
-            <p>Through personalised consultations, yoga therapy, retreats and wholesome food, you are invited to reconnect with the intelligence of your body, mind and spirit.</p>
+            <p className="hide-m">Through personalised consultations, yoga therapy, retreats and wholesome food, you are invited to reconnect with the intelligence of your body, mind and spirit.</p>
             <p className="script big">Begin where you are. Restore what is needed. Live in greater harmony.</p>
             <div className="row">
               <Link className="btn" href="/contact#book">Book a consultation</Link>
