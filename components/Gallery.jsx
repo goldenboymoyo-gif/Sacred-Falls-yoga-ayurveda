@@ -1,12 +1,16 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import photos from "@/lib/gallery.json";
+import base from "@/lib/gallery.json";
+import useContent, { mediaUrl } from "./useContent";
 
 const cats = ["All", "Yoga", "Gatherings", "Treatments", "Consultations", "Tea"];
 
 export default function Gallery() {
   const [cat, setCat] = useState("All");
   const [open, setOpen] = useState(-1);
+  const ct = useContent();
+  const rm = new Set(ct.gallery.remove);
+  const photos = [...base, ...ct.gallery.add.map((a) => ({ ...a, src: mediaUrl(a.src), raw: a.src }))].filter((p) => !rm.has(p.raw || p.src));
   const list = photos.filter((p) => cat === "All" || p.cat === cat);
   const close = useCallback(() => setOpen(-1), []);
   const step = useCallback((d) => setOpen((o) => (o < 0 ? o : (o + d + list.length) % list.length)), [list.length]);

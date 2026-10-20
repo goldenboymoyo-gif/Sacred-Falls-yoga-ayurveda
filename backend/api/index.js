@@ -5,10 +5,11 @@ const crypto = require("crypto");
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(express.json({ limit: "20kb" }));
+const small = express.json({ limit: "20kb" }), big = express.json({ limit: "6mb" });
+app.use((req, res, next) => (req.path === "/api/admin/upload" ? big : small)(req, res, next));
 
 const origins = (process.env.ALLOWED_ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
-app.use(cors({ origin: (o, cb) => cb(null, !o || origins.length === 0 || origins.includes(o)), methods: ["GET", "POST", "PUT", "PATCH", "OPTIONS"] }));
+app.use(cors({ origin: (o, cb) => cb(null, !o || origins.length === 0 || origins.includes(o)), methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] }));
 
 const GH_API = process.env.GITHUB_API || "https://api.github.com";
 const cfg = () => ({ token: process.env.GITHUB_TOKEN, repo: process.env.GITHUB_REPO, branch: process.env.GITHUB_BRANCH || "main" });
@@ -223,6 +224,111 @@ app.put("/api/admin/settings", auth, ready, async (req, res) => {
     await writeJson("data/settings.json", settings, sha, "Update contact settings");
     res.json({ ok: true, settings });
   } catch (e) { fail(res, e); }
+});
+
+// ---- bookings: edit / add / delete ----
+async function findBooking(id) {
+  const months = (await ghList("bookings")).filter((d) => d.type === "dir").map((d) => d.name).sort().reverse();
+  for (const m of months) {
+    const f = (await ghList("bookings/" + m)).find((x) => x.name.endsWith(`-${id}.json`));
+    if (f) return f;
+  }
+  return null;
+}
+const bookingFields = (b = {}) => ({
+  name: t(b.name, 100), email: t(b.email, 150), phone: t(b.phone, 40), service: t(b.service, 80),
+  format: t(b.format, 20), when: t(b.when, 120), message: String(b.message ?? "").trim().slice(0, 2000),
+});
+app.post("/api/admin/bookings", auth, ready, async (req, res) => {
+  const f = bookingFields(req.body);
+  if (!f.name) return res.status(400).json({ error: "Name is required" });
+  const now = new Date(), id = crypto.randomBytes(4).toString("hex");
+  const rec = { id, receivedAt: now.toISOString(), ...f };
+  try {
+    await writeJson(`bookings/${now.toISOString().slice(0, 7)}/${now.toISOString().replace(/[:.]/g, "-")}-${id}.json`, rec, null, `Add booking (${id})`);
+    res.json({ ok: true, booking: { ...rec, status: "new" } });
+  } catch (e) { fail(res, e); }
+});
+app.put("/api/admin/bookings/:id", auth, ready, async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^[a-f0-9]{8}$/.test(id)) return res.status(400).json({ error: "Invalid request" });
+  const f = bookingFields(req.body);
+  if (!f.name) return res.status(400).json({ error: "Name is required" });
+  try {
+    const file = await findBooking(id);
+    if (!file) return res.status(404).json({ error: "Booking not found" });
+    const old = await readRaw(file.path);
+    await writeJson(file.path, { ...old, ...f }, file.sha, `Edit booking ${id}`);
+    res.json({ ok: true });
+  } catch (e) { fail(res, e); }
+});
+app.delete("/api/admin/bookings/:id", auth, ready, async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^[a-f0-9]{8}$/.test(id)) return res.status(400).json({ error: "Invalid request" });
+  try {
+    const file = await findBooking(id);
+    if (!file) return res.status(404).json({ error: "Booking not found" });
+    const r = await ghFetch(file.path, { method: "DELETE", headers: JSON_HDR, body: JSON.stringify({ message: `Delete booking ${id}`, sha: file.sha, branch: cfg().branch }) });
+    if (!r.ok) throw new Error("GitHub " + r.status);
+    res.json({ ok: true });
+  } catch (e) { fail(res, e); }
+});
+
+// ---- whole-site content (text, images, hidden items, gallery) ----
+const cleanContent = (b = {}) => {
+  const obj = (o, max, vmax) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).slice(0, max)
+    .map(([k, v]) => [String(k).slice(0, 200), String(v ?? "").slice(0, vmax)]));
+  const arr = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
+  const g = b.gallery || {};
+  return {
+    text: obj(b.text, 1500, 3000),
+    img: obj(b.img, 300, 300),
+    hide: arr(b.hide, 500).map((k) => String(k).slice(0, 200)),
+    gallery: {
+      add: arr(g.add, 600).map((x) => ({ src: t(x && x.src, 300), cat: t(x && x.cat, 30) || "Gatherings" })).filter((x) => x.src),
+      remove: arr(g.remove, 600).map((x) => t(x, 300)),
+    },
+  };
+};
+app.get("/api/content", async (_req, res) => {
+  if (!cfg().token || !cfg().repo) return res.json(cleanContent());
+  try {
+    const d = await readRaw("data/content.json");
+    res.set("Cache-Control", "s-maxage=20, stale-while-revalidate=120");
+    res.json(cleanContent(d || {}));
+  } catch { res.json(cleanContent()); }
+});
+app.get("/api/admin/content", auth, ready, async (_req, res) => {
+  try { const { data } = await readJson("data/content.json", {}); res.json({ content: cleanContent(data) }); } catch (e) { fail(res, e); }
+});
+app.put("/api/admin/content", auth, ready, async (req, res) => {
+  const content = cleanContent((req.body || {}).content);
+  try {
+    const { sha } = await readJson("data/content.json", {});
+    await writeJson("data/content.json", content, sha, "Update site content");
+    res.json({ ok: true, content });
+  } catch (e) { fail(res, e); }
+});
+app.post("/api/admin/upload", auth, ready, async (req, res) => {
+  const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String((req.body || {}).data || ""));
+  if (!m) return res.status(400).json({ error: "Please choose a JPG, PNG or WebP image" });
+  const ext = m[1] === "jpeg" ? "jpg" : m[1];
+  const name = `${Date.now()}-${crypto.randomBytes(3).toString("hex")}.${ext}`;
+  try {
+    const r = await ghFetch(`media/${name}`, { method: "PUT", headers: JSON_HDR, body: JSON.stringify({ message: "Upload " + name, branch: cfg().branch, content: m[2] }) });
+    if (!r.ok) throw new Error("GitHub " + r.status);
+    res.json({ ok: true, url: `/api/media/${name}` });
+  } catch (e) { fail(res, e); }
+});
+app.get("/api/media/:name", async (req, res) => {
+  const n = String(req.params.name);
+  if (!/^[\w-]+\.(jpg|png|webp)$/.test(n)) return res.status(404).end();
+  try {
+    const r = await ghFetch(`media/${n}?ref=${encodeURIComponent(cfg().branch)}`, { headers: { Accept: "application/vnd.github.raw+json" } });
+    if (!r.ok) return res.status(404).end();
+    res.set({ "Content-Type": { jpg: "image/jpeg", png: "image/png", webp: "image/webp" }[n.split(".")[1]], "Cache-Control": "public, max-age=31536000, immutable", "Cross-Origin-Resource-Policy": "cross-origin" });
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch { res.status(502).end(); }
 });
 
 module.exports = app;

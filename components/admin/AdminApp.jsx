@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import base from "@/lib/gallery.json";
+import { mediaUrl } from "../useContent";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 const KEY = "sfAdminToken";
@@ -33,15 +35,16 @@ export default function AdminApp() {
       <div className="wrap">
         <div className="admhead">
           <h1>Dashboard</h1>
-          <button className="backbtn" onClick={logout}>Sign out</button>
+          <div className="row"><a className="btn" href="/">Edit website</a><button className="backbtn" onClick={logout}>Sign out</button></div>
         </div>
         <div className="tabs">
-          {[["bookings", "Bookings"], ["events", "Events"], ["settings", "Contact details"]].map(([k, l]) => (
+          {[["bookings", "Bookings"], ["events", "Events"], ["gallery", "Gallery"], ["settings", "Contact details"]].map(([k, l]) => (
             <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
         {tab === "bookings" && <Bookings api={api} />}
         {tab === "events" && <Events api={api} />}
+        {tab === "gallery" && <GalleryAdmin api={api} token={token} />}
         {tab === "settings" && <Settings api={api} />}
       </div>
     </section>
@@ -92,6 +95,18 @@ function Bookings({ api }) {
     setItems(items.map((b) => (b.id === id ? { ...b, status } : b)));
     try { await api(`bookings/${id}`, { method: "PATCH", body: { status } }); } catch (e) { setItems(prev); show("err", e.message); }
   }
+  const [editing, setEditing] = useState(null);
+  async function remove(b) {
+    if (!confirm(`Delete the booking from ${b.name}? This cannot be undone.`)) return;
+    try { await api(`bookings/${b.id}`, { method: "DELETE" }); setItems(items.filter((x) => x.id !== b.id)); show("ok", "Deleted."); } catch (e) { show("err", e.message); }
+  }
+  async function saveBooking(f) {
+    try {
+      if (f.id) { await api(`bookings/${f.id}`, { method: "PUT", body: f }); setItems(items.map((x) => (x.id === f.id ? { ...x, ...f } : x))); }
+      else { const r = await api("bookings", { method: "POST", body: f }); setItems([r.booking, ...items]); }
+      setEditing(null); show("ok", "Saved.");
+    } catch (e) { show("err", e.message); }
+  }
   if (!items) return <p>Loading…</p>;
   const shown = items.filter((b) => (filter === "active" ? b.status !== "archived" : filter === "all" || b.status === filter))
     .filter((b) => !q || JSON.stringify(b).toLowerCase().includes(q.toLowerCase()));
@@ -114,10 +129,12 @@ function Bookings({ api }) {
         </select>
         <input placeholder="Search name, email, service…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="backbtn" onClick={load}>Refresh</button>
+        <button className="btn" onClick={() => setEditing({ name: "", email: "", phone: "", service: "", format: "", when: "", message: "" })}>Add booking</button>
       </div>
+      {editing && !editing.id && <BookingForm init={editing} onSave={saveBooking} onCancel={() => setEditing(null)} />}
       {!shown.length && <p className="muted">No bookings here yet.</p>}
       <div className="blist">
-        {shown.map((b) => (
+        {shown.map((b) => editing && editing.id === b.id ? <BookingForm key={b.id} init={editing} onSave={saveBooking} onCancel={() => setEditing(null)} /> : (
           <div className={"bcard " + b.status} key={b.id}>
             <div className="btop">
               <div><strong>{b.name}</strong><div className="muted small">{new Date(b.receivedAt).toLocaleString()}</div></div>
@@ -129,7 +146,69 @@ function Bookings({ api }) {
               <a href={`mailto:${b.email}`}>{b.email}</a>
               {b.phone && <> · <a href={`https://wa.me/${b.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener">{b.phone}</a></>}
             </p>
+            <div className="row"><button className="backbtn" onClick={() => setEditing({ ...b })}>Edit</button><button className="backbtn" onClick={() => remove(b)}>Delete</button></div>
           </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function BookingForm({ init, onSave, onCancel }) {
+  const [f, setF] = useState(init);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return (
+    <div className="bcard">
+      <div className="two"><label>Name<input value={f.name} onChange={set("name")} /></label><label>Email<input value={f.email} onChange={set("email")} /></label></div>
+      <div className="two"><label>Phone<input value={f.phone || ""} onChange={set("phone")} /></label><label>Service<input value={f.service} onChange={set("service")} /></label></div>
+      <div className="two"><label>Format<input value={f.format || ""} placeholder="Online / In person" onChange={set("format")} /></label><label>Preferred time<input value={f.when || ""} onChange={set("when")} /></label></div>
+      <label>Message<textarea rows={3} value={f.message || ""} onChange={set("message")} /></label>
+      <div className="row"><button className="btn" onClick={() => onSave(f)}>Save</button><button className="backbtn" onClick={onCancel}>Cancel</button></div>
+    </div>
+  );
+}
+
+const CATS = ["Yoga", "Gatherings", "Treatments", "Consultations", "Tea"];
+function GalleryAdmin({ api, token }) {
+  const [c, setC] = useState(null);
+  const [cat, setCat] = useState("Gatherings");
+  const [busy, setBusy] = useState(false);
+  const [note, show] = useNotice();
+  useEffect(() => { api("content").then((d) => setC(d.content)).catch((e) => show("err", e.message)); }, [api]);
+  if (!c) return <p>Loading…</p>;
+  const rm = new Set(c.gallery.remove);
+  const all = [...c.gallery.add.map((a) => ({ ...a, added: true })), ...base].filter((p) => !rm.has(p.src));
+  const del = (p) => setC({ ...c, gallery: p.added ? { ...c.gallery, add: c.gallery.add.filter((a) => a.src !== p.src) } : { ...c.gallery, remove: [...c.gallery.remove, p.src] } });
+  const shrink = (file) => new Promise((ok, no) => {
+    const im = new Image(), u = URL.createObjectURL(file);
+    im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL("image/jpeg", 0.85)); };
+    im.onerror = () => no(new Error("Could not read an image")); im.src = u;
+  });
+  async function upload(e) {
+    const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+    setBusy(true);
+    try {
+      const add = [];
+      for (const f of files) { const r = await api("upload", { method: "POST", body: { data: await shrink(f) } }); add.push({ src: r.url, cat }); }
+      setC((p) => ({ ...p, gallery: { ...p.gallery, add: [...add, ...p.gallery.add] } })); show("ok", `${add.length} photo(s) uploaded. Press Save to publish.`);
+    } catch (er) { show("err", er.message); } finally { setBusy(false); }
+  }
+  async function save() {
+    setBusy(true);
+    try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The Gallery page will update shortly."); } catch (er) { show("err", er.message); } finally { setBusy(false); }
+  }
+  return (
+    <>
+      {note}
+      <div className="admbar">
+        <select value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select>
+        <label className="btn" style={{ cursor: "pointer" }}>{busy ? "Working…" : "Add photos"}<input type="file" accept="image/*" multiple hidden onChange={upload} disabled={busy} /></label>
+        <button className="btn" onClick={save} disabled={busy}>Save changes</button>
+      </div>
+      <p className="muted">New photos go into the category chosen above. Tap the cross to remove a photo, then Save.</p>
+      <div className="agrid">
+        {all.map((p) => (
+          <div key={p.src} className="aph"><img src={mediaUrl(p.src)} alt="" loading="lazy" /><button onClick={() => del(p)} aria-label="Remove photo">✕</button><span>{p.cat}</span></div>
         ))}
       </div>
     </>
