@@ -1,15 +1,16 @@
 import Link from "next/link";
+import ReadMore from "@/components/ReadMore";
 import PageHead from "@/components/PageHead";
 export const metadata = { title: "About Sara Norton", description: "Sara Norton is a qualified Ayurveda Practitioner, Yoga Teacher and Yoga Therapist trained in Rishikesh and Kerala." };
 export default function Page() {
   return (<>
     <PageHead eyebrow="About" title="About Sara Norton" />
     <section><div className="wrap split">
-     <div>
+     <ReadMore>
       <p>Sara Norton is a qualified Ayurveda Practitioner, Yoga Teacher and Yoga Therapist. Her professional training took place in India, including in Rishikesh and Kerala, where she immersed herself in the study and practice of these traditional systems of wellbeing.</p>
       <p>Her work brings together the wisdom of Ayurveda, the therapeutic application of yoga, and a deep respect for each person’s individual nature. Sara offers practical, compassionate guidance to help clients understand their constitution, support balance in daily life and develop sustainable practices for long term wellbeing.</p>
       <p>Through personalised consultations, yoga therapy, food, seasonal self care and mindful daily routines, she supports people to reconnect with their bodies, settle their minds and live with greater vitality and ease.</p>
-     </div>
+     </ReadMore>
      <img className="photo portraitbig" src="/images/sara.jpg" alt="Sara Norton" />
     </div></section>
     <section className="alt"><div className="wrap narrow">

@@ -93,6 +93,7 @@ export default function SiteEditor() {
   // edit mode wiring
   useEffect(() => {
     if (!edit) return;
+    document.body.classList.add("sfedit");
     apply();
     const els = items.current;
     els.forEach(({ el, type }) => {
@@ -122,6 +123,7 @@ export default function SiteEditor() {
     document.addEventListener("keydown", onKey, true);
     document.addEventListener("paste", onPaste, true);
     return () => {
+      document.body.classList.remove("sfedit");
       document.removeEventListener("click", onClick, true); document.removeEventListener("input", onInput, true);
       document.removeEventListener("keydown", onKey, true); document.removeEventListener("paste", onPaste, true);
       els.forEach(({ el }) => { el.classList.remove("sf-img", "sf-text", "sf-sel"); el.removeAttribute("contenteditable"); });
