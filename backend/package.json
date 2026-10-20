@@ -1,0 +1,8 @@
+{
+  "name": "sacred-falls-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "api/index.js",
+  "scripts": { "dev": "node api/index.js" },
+  "dependencies": { "cors": "^2.8.5", "express": "^4.21.2" }
+}
