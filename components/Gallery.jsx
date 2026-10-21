@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import base from "@/lib/gallery.json";
 import useContent, { mediaUrl } from "./useContent";
 
-const cats = ["All", "Yoga", "Gatherings", "Treatments", "Consultations", "Tea"];
+const cats = ["All", "Chavutti", "Treatments", "Yoga", "Gatherings", "Consultations", "Tea"];
 
 export default function Gallery() {
   const [cat, setCat] = useState("All");

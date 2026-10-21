@@ -25,5 +25,20 @@ export default function Page() {
      </ReadMore>
      <img className="photo" src="/images/treatment.jpg" alt="Warm herbal oil used in an Ayurvedic treatment" loading="lazy" />
     </div></section>
+    <section id="chavutti"><div className="wrap narrow">
+      <span className="eyebrow">Traditional Kerala bodywork</span>
+      <h2>Chavutti Uzhichil</h2>
+      <div className="chgrid">
+        <img className="photo" src="/images/chavutti-ropes.jpg" alt="Sara holding the ropes during Chavutti Uzhichil" loading="lazy" />
+        <img className="photo" src="/images/chavutti-top.jpg" alt="Chavutti Uzhichil seen from above" loading="lazy" />
+        <img className="photo" src="/images/chavutti-foot.jpg" alt="Foot pressure with warm oil" loading="lazy" />
+      </div>
+      <ReadMore>
+        <p>Chavutti Uzhichil is a traditional Kerala bodywork practice rooted in Kalarippayattu, India’s ancient martial arts tradition. It was traditionally used within Kalari training to prepare and restore the body for demanding practice, helping practitioners maintain suppleness, strength and readiness for movement.</p>
+        <p>During a floor-based treatment, the client usually lies face down while the practitioner uses warm oil and carefully controlled foot pressure in long, flowing strokes. A suspended rope supports the practitioner’s balance and enables the work to be delivered with steadiness and precision.</p>
+        <p>Sara trained in this traditional Kalarippayattu bodywork practice at CVN Kalari Nadakav in Calicut, India. Her treatment honours its martial-arts lineage while being adapted thoughtfully to the individual.</p>
+        <Link className="btn" href="/contact#book">Book a treatment</Link>
+      </ReadMore>
+    </div></section>
   </>);
 }

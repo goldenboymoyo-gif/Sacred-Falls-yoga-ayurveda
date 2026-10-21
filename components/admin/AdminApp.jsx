@@ -168,7 +168,7 @@ function BookingForm({ init, onSave, onCancel }) {
   );
 }
 
-const CATS = ["Yoga", "Gatherings", "Treatments", "Consultations", "Tea"];
+const CATS = ["Chavutti", "Treatments", "Yoga", "Gatherings", "Treatments", "Consultations", "Tea"];
 function GalleryAdmin({ api, token }) {
   const [c, setC] = useState(null);
   const [cat, setCat] = useState("Gatherings");

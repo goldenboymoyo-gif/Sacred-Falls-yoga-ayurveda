@@ -12,7 +12,7 @@ export default function Page() {
       <p>Each experience brings together Ayurveda, yoga, nourishing food, meditation, nature and meaningful connection. Selected retreats can also be combined with unforgettable safari experiences, immersed in the wilderness, wildlife and natural beauty of Africa.</p>
       <p>These gatherings offer an opportunity to rest, learn and reconnect with yourself, with others and with the living world around you. You will leave with practical tools and inspiration to carry into everyday life.</p>
      </ReadMore>
-     <img className="photo" src="/images/circle.jpg" alt="A small group gathered on the lawn" loading="lazy" />
+     <div className="pair"><img className="photo" src="/images/retreat-lawn.jpg" alt="A small group gathered on the lawn" loading="lazy" /><img className="photo" src="/images/bowls.jpg" alt="Brass singing bowls and small tools" loading="lazy" style={{ marginTop: 40 }} /></div>
     </div></section>
     <section className="alt"><div className="wrap split rev">
      <ReadMore>

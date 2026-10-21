@@ -65,7 +65,7 @@ export default function Home() {
           </div>
           <div className="collage">
             <img className="arch" src="/images/yoga-pose.jpg" alt="Triangle pose on a yoga mat in the garden" />
-            <img className="print p1" src="/images/hero.jpg" alt="A relaxation practice on the lawn" />
+            <img className="print p1" src="/images/chavutti-ropes.jpg" alt="Sara practising Chavutti Uzhichil, holding the ropes" />
             <img className="print p2" src="/images/consult.jpg" alt="A consultation in conversation" />
           </div>
         </div>
@@ -76,7 +76,7 @@ export default function Home() {
           <img className="portrait" src="/images/sara.jpg" alt="Sara Norton" />
           <div>
             <h2>Hello, I'm Sara Norton</h2>
-            <p>I am a qualified Ayurveda Practitioner, Yoga Teacher and Yoga Therapist. My professional training took place in India, including in Rishikesh and Kerala, where I immersed myself in the study and practice of these traditional systems of wellbeing.</p>
+            <p>I am a qualified Ayurveda Practitioner, Yoga Teacher and Yoga Therapist. My professional training took place in many different schools in Rishikesh and Kerala, India, where I immersed myself in the study and practice of these traditional systems of wellbeing.</p>
             <p>My work is practical and compassionate, with a deep respect for each person’s individual nature.</p>
             <Link className="textlink" href="/about">More about my work</Link>
           </div>
