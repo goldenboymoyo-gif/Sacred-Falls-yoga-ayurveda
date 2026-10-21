@@ -66,18 +66,22 @@ app.post("/api/booking", async (req, res) => {
     return res.status(502).json({ error: "Could not save your request" });
   }
 
-  // optional email notification (never blocks the booking)
+  // optional email notification. Awaited: serverless functions freeze once the response is sent.
   if (process.env.RESEND_API_KEY && process.env.BOOKING_TO_EMAIL) {
     const rows = Object.entries(booking).map(([k, v]) => `<tr><td><b>${k}</b></td><td>${esc(v || "-")}</td></tr>`).join("");
-    fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.BOOKING_FROM_EMAIL || "Sacred Falls <onboarding@resend.dev>",
-        to: [process.env.BOOKING_TO_EMAIL], reply_to: booking.email,
-        subject: `Booking request: ${booking.service} - ${booking.name}`, html: `<h2>New booking request</h2><table cellpadding="6">${rows}</table>`,
-      }),
-    }).catch(() => {});
+    try {
+      const er = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({
+          from: process.env.BOOKING_FROM_EMAIL || "Sacred Falls <onboarding@resend.dev>",
+          to: process.env.BOOKING_TO_EMAIL.split(",").map((x) => x.trim()).filter(Boolean), reply_to: booking.email,
+          subject: `Booking request: ${booking.service} - ${booking.name}`, html: `<h2>New booking request</h2><table cellpadding="6">${rows}</table>`,
+        }),
+      });
+      if (!er.ok) console.error("booking email failed", er.status, (await er.text()).slice(0, 300));
+    } catch (e) { console.error("booking email error", e.message); }
   }
   res.json({ ok: true, id });
 });
