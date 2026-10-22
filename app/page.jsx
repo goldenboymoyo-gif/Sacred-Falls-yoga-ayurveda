@@ -65,7 +65,7 @@ export default function Home() {
           </div>
           <div className="collage">
             <img className="arch" src="/images/yoga-pose.jpg" alt="Triangle pose on a yoga mat in the garden" />
-            <img className="print p1" src="/images/chavutti-ropes.jpg" alt="Sara practising Chavutti Uzhichil, holding the ropes" />
+            <img className="print p1" src="/images/chav3.jpg" alt="Sara practising Chavutti Uzhichil, holding the ropes" />
             <img className="print p2" src="/images/consult.jpg" alt="A consultation in conversation" />
           </div>
         </div>

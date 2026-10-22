@@ -29,9 +29,9 @@ export default function Page() {
       <span className="eyebrow">Traditional Kerala bodywork</span>
       <h2>Chavutti Uzhichil</h2>
       <div className="chgrid">
-        <img className="photo" src="/images/chavutti-ropes.jpg" alt="Sara holding the ropes during Chavutti Uzhichil" loading="lazy" />
-        <img className="photo" src="/images/chavutti-top.jpg" alt="Chavutti Uzhichil seen from above" loading="lazy" />
-        <img className="photo" src="/images/chavutti-foot.jpg" alt="Foot pressure with warm oil" loading="lazy" />
+        <img className="photo" src="/images/chav3.jpg" alt="Sara holding the ropes during Chavutti Uzhichil" loading="lazy" />
+        <img className="photo" src="/images/chav2.jpg" alt="Sara giving a Chavutti Uzhichil treatment using the ropes" loading="lazy" />
+        <img className="photo" src="/images/chav4.jpg" alt="Chavutti Uzhichil treatment on a woven mat" loading="lazy" />
       </div>
       <ReadMore>
         <p>Chavutti Uzhichil is a traditional Kerala bodywork practice rooted in Kalarippayattu, India’s ancient martial arts tradition. It was traditionally used within Kalari training to prepare and restore the body for demanding practice, helping practitioners maintain suppleness, strength and readiness for movement.</p>
