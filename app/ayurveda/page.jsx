@@ -25,15 +25,31 @@ export default function Page() {
      </ReadMore>
      <img className="photo" src="/images/treatment.jpg" alt="Warm herbal oil used in an Ayurvedic treatment" loading="lazy" />
     </div></section>
-    <section id="chavutti"><div className="wrap narrow">
-      <span className="eyebrow">Traditional Kerala bodywork</span>
-      <h2>Chavutti Uzhichil</h2>
+    <section className="alt" id="food"><div className="wrap narrow">
+      <span className="eyebrow">The heart of Ayurveda</span>
+      <h2>Food and Nutrition</h2>
       <div className="chgrid">
-        <img className="photo" src="/images/chav3.jpg" alt="Sara holding the ropes during Chavutti Uzhichil" loading="lazy" />
-        <img className="photo" src="/images/chav2.jpg" alt="Sara giving a Chavutti Uzhichil treatment using the ropes" loading="lazy" />
-        <img className="photo" src="/images/chav4.jpg" alt="Chavutti Uzhichil treatment on a woven mat" loading="lazy" />
+        <img className="photo" src="/images/food-1.jpg" alt="Spinach dhal served in a blue and white bowl by candlelight" loading="lazy" />
+        <img className="photo" src="/images/tea.jpg" alt="Tea being poured at a garden table" loading="lazy" />
+        <img className="photo" src="/images/food-2.jpg" alt="A home-cooked Ayurvedic meal with rice, raita and dhal" loading="lazy" />
       </div>
       <ReadMore>
+        <p>In Ayurveda, food is the main healing. What we eat, how we prepare it and when we eat it shape our digestion, energy, sleep and mood every day.</p>
+        <p>Sara teaches simple, seasonal cooking that suits your own constitution: soothing soups and dhal, fresh chutneys, wholesome breakfasts and nourishing teas, all gathered in her recipe book, From Our Kitchen.</p>
+        <Link className="btn" href="/food">Recipes and the book</Link>
+      </ReadMore>
+    </div></section>
+    <section id="chavutti"><div className="wrap narrow">
+      <span className="eyebrow">Hands-on therapies</span>
+      <h2>Ayurveda Treatments and Chavutti Uzhichil</h2>
+      <div className="chgrid four">
+        <img className="photo" src="/images/dough-oil.jpg" alt="Warm herbal oil held in a dough ring on the back during an Ayurvedic treatment" loading="lazy" />
+        <img className="photo" src="/images/dough-oil2.jpg" alt="Herbal oil being poured into a dough ring" loading="lazy" />
+        <img className="photo" src="/images/chav3.jpg" alt="Sara holding the ropes during Chavutti Uzhichil" loading="lazy" />
+        <img className="photo" src="/images/chav2.jpg" alt="Sara giving a Chavutti Uzhichil treatment using the ropes" loading="lazy" />
+      </div>
+      <ReadMore>
+        <p>Ayurvedic treatments use warm herbal oils applied with care, including oil held on the body within a ring of dough, to soothe, nourish and restore balance.</p>
         <p>Chavutti Uzhichil is a traditional Kerala bodywork practice rooted in Kalarippayattu, India’s ancient martial arts tradition. It was traditionally used within Kalari training to prepare and restore the body for demanding practice, helping practitioners maintain suppleness, strength and readiness for movement.</p>
         <p>During a floor-based treatment, the client usually lies face down while the practitioner uses warm oil and carefully controlled foot pressure in long, flowing strokes. A suspended rope supports the practitioner’s balance and enables the work to be delivered with steadiness and precision.</p>
         <p>Sara trained in this traditional Kalarippayattu bodywork practice at CVN Kalari Nadakav in Calicut, India. Her treatment honours its martial-arts lineage while being adapted thoughtfully to the individual.</p>

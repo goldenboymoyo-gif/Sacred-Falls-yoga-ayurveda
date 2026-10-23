@@ -197,7 +197,7 @@ app.get("/api/admin/events", auth, ready, async (_req, res) => {
 app.put("/api/admin/events", auth, ready, async (req, res) => {
   const list = (req.body || {}).events;
   if (!Array.isArray(list) || list.length > 50) return res.status(400).json({ error: "Invalid events" });
-  const events = list.map((e) => ({ title: t(e.title, 120), date: t(e.date, 60), location: t(e.location, 120), description: t(e.description, 600) })).filter((e) => e.title);
+  const events = list.map((e) => ({ title: t(e.title, 120), date: t(e.date, 60), location: t(e.location, 120), description: t(e.description, 600), image: t(e.image, 300), link: t(e.link, 300) })).filter((e) => e.title);
   try {
     const { sha } = await readJson("data/events.json", []);
     await writeJson("data/events.json", events, sha, "Update events");
@@ -289,7 +289,7 @@ const cleanContent = (b = {}) => {
     img: obj(b.img, 300, 300),
     hide: arr(b.hide, 500).map((k) => String(k).slice(0, 200)),
     gallery: {
-      add: arr(g.add, 600).map((x) => ({ src: t(x && x.src, 300), cat: t(x && x.cat, 30) || "Gatherings" })).filter((x) => x.src),
+      add: arr(g.add, 600).map((x) => ({ src: t(x && x.src, 300), cat: t(x && x.cat, 30) || "In class" })).filter((x) => x.src),
       remove: arr(g.remove, 600).map((x) => t(x, 300)),
     },
   };

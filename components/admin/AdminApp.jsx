@@ -168,10 +168,10 @@ function BookingForm({ init, onSave, onCancel }) {
   );
 }
 
-const CATS = ["Chavutti", "Treatments", "Yoga", "Gatherings", "Treatments", "Consultations", "Tea"];
+const CATS = ["Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
 function GalleryAdmin({ api, token }) {
   const [c, setC] = useState(null);
-  const [cat, setCat] = useState("Gatherings");
+  const [cat, setCat] = useState("In class");
   const [busy, setBusy] = useState(false);
   const [note, show] = useNotice();
   useEffect(() => { api("content").then((d) => setC(d.content)).catch((e) => show("err", e.message)); }, [api]);
@@ -215,7 +215,12 @@ function GalleryAdmin({ api, token }) {
   );
 }
 
-const blank = { title: "", date: "", location: "", description: "" };
+const blank = { title: "", date: "", location: "", description: "", image: "", link: "" };
+const shrinkImg = (file) => new Promise((ok, no) => {
+  const im = new Image(), u = URL.createObjectURL(file);
+  im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL("image/jpeg", 0.85)); };
+  im.onerror = () => no(new Error("Could not read that image")); im.src = u;
+});
 function Events({ api }) {
   const [list, setList] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -224,6 +229,12 @@ function Events({ api }) {
   if (!list) return <p>Loading…</p>;
   const set = (i, k, v) => setList(list.map((e, j) => (j === i ? { ...e, [k]: v } : e)));
   const move = (i, d) => { const n = [...list]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; setList(n); };
+  async function pic(i, e) {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    setBusy(true);
+    try { const r = await api("upload", { method: "POST", body: { data: await shrinkImg(f) } }); set(i, "image", r.url); show("ok", "Poster added. Press Save changes to publish."); }
+    catch (er) { show("err", er.message); } finally { setBusy(false); }
+  }
   async function save() {
     setBusy(true);
     try { const r = await api("events", { method: "PUT", body: { events: list } }); setList(r.events); show("ok", "Saved. The Retreats page will update shortly."); }
@@ -231,7 +242,7 @@ function Events({ api }) {
   }
   return (
     <>
-      <p className="muted">These appear on the Retreats page under Upcoming Offerings. With none listed, the standard list is shown.</p>
+      <p className="muted">These appear on the Home page and on the Retreats page under Upcoming Offerings. Add a poster or photo to advertise each one. With none listed, the standard list is shown.</p>
       {note}
       {list.map((e, i) => (
         <div className="bcard" key={i}>
@@ -241,6 +252,12 @@ function Events({ api }) {
           </div>
           <label>Location<input value={e.location} onChange={(x) => set(i, "location", x.target.value)} maxLength={120} /></label>
           <label>Description<textarea rows={3} value={e.description} onChange={(x) => set(i, "description", x.target.value)} maxLength={600} /></label>
+          <label>Link for more details or booking (optional)<input value={e.link || ""} placeholder="https://..." onChange={(x) => set(i, "link", x.target.value)} maxLength={300} /></label>
+          <div className="row" style={{ marginTop: 8, alignItems: "center" }}>
+            {e.image && <img src={mediaUrl(e.image)} alt="" style={{ height: 64, borderRadius: 8 }} />}
+            <label className="backbtn" style={{ cursor: "pointer" }}>{e.image ? "Change poster or photo" : "Add poster or photo"}<input type="file" accept="image/*" hidden onChange={(x) => pic(i, x)} disabled={busy} /></label>
+            {e.image && <button type="button" className="backbtn" onClick={() => set(i, "image", "")}>Remove poster</button>}
+          </div>
           <div className="row" style={{ marginTop: 8 }}>
             <button type="button" className="backbtn" onClick={() => move(i, -1)}>Move up</button>
             <button type="button" className="backbtn" onClick={() => move(i, 1)}>Move down</button>

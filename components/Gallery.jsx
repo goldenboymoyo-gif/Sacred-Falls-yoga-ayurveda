@@ -3,14 +3,15 @@ import { useState, useEffect, useCallback } from "react";
 import base from "@/lib/gallery.json";
 import useContent, { mediaUrl } from "./useContent";
 
-const cats = ["All", "Chavutti", "Treatments", "Yoga", "Gatherings", "Consultations", "Tea"];
+const cats = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
+const alias = { Gatherings: "In class", Tea: "Nutrition" };
 
 export default function Gallery() {
   const [cat, setCat] = useState("All");
   const [open, setOpen] = useState(-1);
   const ct = useContent();
   const rm = new Set(ct.gallery.remove);
-  const photos = [...base, ...ct.gallery.add.map((a) => ({ ...a, src: mediaUrl(a.src), raw: a.src }))].filter((p) => !rm.has(p.raw || p.src));
+  const photos = [...base, ...ct.gallery.add.map((a) => ({ ...a, cat: alias[a.cat] || a.cat, src: mediaUrl(a.src), raw: a.src }))].filter((p) => !rm.has(p.raw || p.src));
   const list = photos.filter((p) => cat === "All" || p.cat === cat);
   const close = useCallback(() => setOpen(-1), []);
   const step = useCallback((d) => setOpen((o) => (o < 0 ? o : (o + d + list.length) % list.length)), [list.length]);

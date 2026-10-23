@@ -8,8 +8,8 @@ export default function Page() {
     <PageHead eyebrow="Retreats" title="Retreats, Workshops and Shared Learning" />
     <section><div className="wrap split">
      <ReadMore>
-      <p>Sacred Falls Ayurveda and Yoga offers retreats and workshops held worldwide, creating time and space to step away from daily life and return to what is essential.</p>
-      <p>Each experience brings together Ayurveda, yoga, nourishing food, meditation, nature and meaningful connection. Selected retreats can also be combined with unforgettable safari experiences, immersed in the wilderness, wildlife and natural beauty of Africa.</p>
+      <p>Sacred Falls Ayurveda and Yoga offers retreats and workshops held within Zimbabwe and worldwide, creating time and space to step away from daily life and return to what is essential.</p>
+      <p>Each experience brings together Ayurveda, yoga, yoga therapy, nourishing food, meditation, nature and meaningful connection. Selected retreats can also be combined with unforgettable safari experiences, immersed in the wilderness, wildlife and natural beauty of Africa.</p>
       <p>These gatherings offer an opportunity to rest, learn and reconnect with yourself, with others and with the living world around you. You will leave with practical tools and inspiration to carry into everyday life.</p>
      </ReadMore>
      <div className="pair"><img className="photo" src="/images/retreat-lawn.jpg" alt="A small group gathered on the lawn" loading="lazy" /><img className="photo" src="/images/bowls.jpg" alt="Brass singing bowls and small tools" loading="lazy" style={{ marginTop: 40 }} /></div>
@@ -21,7 +21,7 @@ export default function Page() {
       <p style={{ marginTop: "1.2rem" }}>Dates and details are shared as they are confirmed. Get in touch to hear first.</p>
       <Link className="btn" href="/contact#book">Enquire about upcoming events</Link>
      </ReadMore>
-     <img className="photo" src="/images/patio.jpg" alt="Yoga practice on the patio" loading="lazy" />
+     <img className="photo" src="/images/waterfall.jpg" alt="Yoga beside the Victoria Falls spray" loading="lazy" />
     </div></section>
   </>);
 }

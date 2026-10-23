@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Events from "@/components/Events";
 
 const offerings = [
   {
@@ -40,7 +41,7 @@ const offerings = [
     alt: "A small group gathered on the lawn",
     href: "/retreats",
     text: [
-      "Time and space to step away from daily life and return to what is essential. Ayurveda, yoga, nourishing food, meditation and nature, held worldwide.",
+      "Time and space to step away from daily life and return to what is essential. Ayurveda, yoga, yoga therapy, nourishing food, meditation and nature, held within Zimbabwe and worldwide.",
       "Selected retreats can be combined with safari experiences in the wilderness of Africa.",
     ],
     cta: "See what's coming up",
@@ -53,10 +54,10 @@ export default function Home() {
       <section className="hero2">
         <div className="wrap hero2grid">
           <div className="herotext">
-            <p className="script">Sacred Falls Ayurveda and Yoga</p>
-            <h1>Return to your natural rhythm</h1>
+            <p className="script brand">Sacred Falls Ayurveda and Yoga</p>
+            <h1 className="tagline">Return to your natural rhythm</h1>
             <p>Sacred Falls Ayurveda and Yoga offers a gentle, practical path towards greater balance, vitality and ease. Drawing on the ancient wisdom of Ayurveda and Yoga Therapy, Sara Norton supports each person to understand their unique constitution and create nourishing, sustainable practices for everyday life.</p>
-            <p className="hide-m">Through personalised consultations, yoga therapy, retreats and wholesome food, you are invited to reconnect with the intelligence of your body, mind and spirit.</p>
+            <p className="hide-m">Through personalised consultations, yoga therapy, workshops, retreats and wholesome food, you are invited to reconnect with the intelligence of your body, mind and spirit.</p>
             <p className="script big">Begin where you are. Restore what is needed. Live in greater harmony.</p>
             <div className="row">
               <Link className="btn" href="/contact#book">Book a consultation</Link>
@@ -96,6 +97,16 @@ export default function Home() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="alt upcoming" id="upcoming">
+        <div className="wrap narrow">
+          <h2 className="center">Upcoming Retreats and Events</h2>
+          <Events />
+          <div className="row" style={{ justifyContent: "center", marginTop: "1.2rem" }}>
+            <Link className="btn" href="/retreats">All retreats and workshops</Link>
+          </div>
         </div>
       </section>
 
