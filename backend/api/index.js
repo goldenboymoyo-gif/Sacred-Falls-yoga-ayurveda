@@ -294,6 +294,15 @@ const cleanContent = (b = {}) => {
       remove: arr(g.remove, 600).map((x) => t(x, 300)),
       edit: Object.fromEntries(Object.entries(g.edit && typeof g.edit === "object" ? g.edit : {}).slice(0, 800).map(([k, v]) => [t(k, 300), { cat: t(v && v.cat, 30), desc: t(v && v.desc, 200) }])),
     },
+    layout: Object.fromEntries(Object.entries(b.layout && typeof b.layout === "object" ? b.layout : {}).slice(0, 500).map(([k, v]) => {
+      const n = (x, lo, hi) => { const y = Number(x); return Number.isFinite(y) ? Math.min(hi, Math.max(lo, Math.round(y))) : undefined; };
+      const o = {}; v = v || {};
+      if (n(v.fs, 50, 300)) o.fs = n(v.fs, 50, 300);
+      if (n(v.w, 20, 100)) o.w = n(v.w, 20, 100);
+      if (v.cols === 1 || v.cols === 2) o.cols = v.cols;
+      if (v.at) o.at = t(v.at, 200);
+      return [t(k, 200), o];
+    })),
     certs: {
       add: arr(c.add, 60).map((x) => ({ src: t(x && x.src, 300), title: t(x && x.title, 200) })).filter((x) => x.src),
       remove: arr(c.remove, 60).map((x) => t(x, 300)),

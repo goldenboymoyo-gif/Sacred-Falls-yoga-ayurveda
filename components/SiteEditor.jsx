@@ -20,10 +20,12 @@ function scan(path) {
       if (el.tagName === "IMG") {
         if (el.closest(".masonry")) return;
         if (!el.dataset.o) el.dataset.o = el.getAttribute("src");
-        out.push({ el, type: "img", key: `${scope}|i${ii++}|${hash(el.dataset.o)}` });
+        const k = `${scope}|i${ii++}|${hash(el.dataset.o)}`; if (!el.dataset.k) el.dataset.k = k;
+        out.push({ el, type: "img", key: el.dataset.k });
       } else if (!el.children.length && el.textContent.trim()) {
         if (el.dataset.o === undefined) el.dataset.o = el.textContent;
-        out.push({ el, type: "text", key: `${scope}|t${ti++}|${hash(el.dataset.o)}` });
+        const k = `${scope}|t${ti++}|${hash(el.dataset.o)}`; if (!el.dataset.k) el.dataset.k = k;
+        out.push({ el, type: "text", key: el.dataset.k });
       } else if (el.children.length) {
         ti++; // keep indexes stable for mixed elements
       }
@@ -60,6 +62,9 @@ export default function SiteEditor() {
   const sel = useRef(null);
   const pending = useRef({ text: {}, img: {} });
   const hideRef = useRef(null);
+  const layoutRef = useRef(null);
+  const movingRef = useRef(null);
+  const [selT, setSelT] = useState("");
   const editRef = useRef(false);
   editRef.current = edit;
 
@@ -70,6 +75,26 @@ export default function SiteEditor() {
     items.current = scan(path);
     if (!hideRef.current) hideRef.current = new Set(c.hide || []);
     const hide = hideRef.current;
+    if (!layoutRef.current) layoutRef.current = JSON.parse(JSON.stringify(c.layout || {}));
+    const L = layoutRef.current;
+    items.current.forEach(({ el, type, key }) => {
+      const l = L[key];
+      if (type === "text") {
+        el.style.fontSize = l && l.fs ? l.fs + "%" : "";
+        if (l && "cols" in l && el.parentElement) { const q = el.parentElement.style; q.columnCount = l.cols > 1 ? "2" : ""; q.columnGap = l.cols > 1 ? "2.2rem" : ""; }
+      } else {
+        const u = el.closest("figure.fig") || el;
+        if (l && l.w) { u.style.width = l.w + "%"; u.style.marginLeft = u.style.marginRight = "auto"; el.style.height = "auto"; }
+        else if (u.style.width) { u.style.width = ""; u.style.marginLeft = u.style.marginRight = ""; el.style.height = ""; }
+        const tgt = l && l.at && items.current.find((i) => i.key === l.at);
+        if (tgt && tgt.el.closest("section") === u.closest("section")) {
+          if (!u.__home) u.__home = { p: u.parentNode, n: u.nextSibling };
+          if (tgt.el.nextElementSibling !== u) { tgt.el.after(u); u.style.display = "block"; }
+        } else if (u.__home && !(l && l.at)) {
+          u.__home.p.insertBefore(u, u.__home.n); u.style.display = ""; u.__home = null;
+        }
+      }
+    });
     items.current.forEach(({ el, type, key }) => {
       const p = pending.current;
       if (type === "text") {
@@ -109,10 +134,15 @@ export default function SiteEditor() {
       const inSite = e.target.closest("header,main,footer");
       if (inSite) { if (e.target.closest("a,button,label,input,select,textarea,summary") || it) e.preventDefault(); }
       if (!it) return;
-      sel.current = it;
+      if (movingRef.current && it.type === "text") {
+        e.preventDefault(); e.stopPropagation();
+        const m = movingRef.current; movingRef.current = null;
+        setLay(m.key, { at: it.key }); setMsg("Photo moved below that paragraph. Press Save to publish."); return;
+      }
+      sel.current = it; setSelT(it.type);
       document.querySelectorAll(".sf-sel").forEach((x) => x.classList.remove("sf-sel"));
       it.el.classList.add("sf-sel");
-      if (it.type === "img") { e.stopPropagation(); pick(it); }
+      if (it.type === "img") { e.preventDefault(); e.stopPropagation(); }
     };
     const onInput = (e) => {
       const it = items.current.find((i) => i.el === e.target || i.el.contains(e.target));
@@ -149,6 +179,19 @@ export default function SiteEditor() {
     inp.click();
   }
 
+  const cur = () => (sel.current ? (layoutRef.current[sel.current.key] || {}) : {});
+  function setLay(key, patch) {
+    layoutRef.current[key] = { ...(layoutRef.current[key] || {}), ...patch };
+    Object.keys(layoutRef.current[key]).forEach((k) => layoutRef.current[key][k] === undefined && delete layoutRef.current[key][k]);
+    apply(); setDirty((d) => d + 1);
+  }
+  const need = () => { if (!sel.current) { setMsg("Click a text or photo on the page first."); return null; } return sel.current; };
+  const bump = (field, d, lo, hi, base) => { const it = need(); if (!it) return; setLay(it.key, { [field]: Math.min(hi, Math.max(lo, (cur()[field] || base) + d)) }); };
+  const toggleCols = () => { const it = need(); if (it) setLay(it.key, { cols: cur().cols === 2 ? 1 : 2 }); };
+  const startMove = () => { const it = need(); if (!it) return; movingRef.current = it; setMsg("Now click the paragraph this photo should go under."); };
+  const putBack = () => { const it = need(); if (it) setLay(it.key, { at: undefined }); };
+  const replacePhoto = () => { const it = need(); if (it) pick(it); };
+
   function toggleHide() {
     const it = sel.current; if (!it) { setMsg("Click something on the page first."); return; }
     const h = hideRef.current;
@@ -164,7 +207,7 @@ export default function SiteEditor() {
       const cur = (await g.json()).content;
       const p = pending.current;
       const next = { ...cur, text: { ...cur.text, ...p.text }, img: { ...cur.img, ...p.img },
-        hide: [...(hideRef.current || [])] };
+        hide: [...(hideRef.current || [])], layout: layoutRef.current };
       // revert-to-original means no override needed
       Object.keys(next.text).forEach((k) => { const it = items.current.find((i) => i.key === k); if (it && it.el.dataset.o === next.text[k]) delete next.text[k]; });
       const r = await fetch(`${API}/api/admin/content`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ content: next }) });
@@ -186,7 +229,9 @@ export default function SiteEditor() {
         {!nav.some((n) => n.href === path) && <option value="">Page…</option>}
         {nav.map((n) => <option key={n.href} value={n.href}>{n.label}</option>)}
       </select>
-      <span className="sfhint">Click text to edit it. Click a photo to replace it.</span>
+      <span className="sfhint">Click text to edit it. Click a photo or text to select it, then use the buttons.</span>
+      {selT === "text" && <><button onClick={() => bump("fs", -10, 50, 300, 100)}>Text smaller</button><button onClick={() => bump("fs", 10, 50, 300, 100)}>Text bigger</button><button onClick={toggleCols}>Split text in 2 columns</button></>}
+      {selT === "img" && <><button onClick={replacePhoto}>Replace photo</button><button onClick={() => bump("w", -10, 20, 100, 100)}>Photo smaller</button><button onClick={() => bump("w", 10, 20, 100, 100)}>Photo bigger</button><button onClick={startMove}>Move photo into text</button><button onClick={putBack}>Put photo back</button></>}
       <button onClick={toggleHide}>Hide / show selected</button>
       <button className="go" onClick={save}>Save{dirty ? " •" : ""}</button>
       <a href="/admin">Dashboard</a>
