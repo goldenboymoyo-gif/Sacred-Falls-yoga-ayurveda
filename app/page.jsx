@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Events from "@/components/Events";
+import Certificates from "@/components/Certificates";
 
 const offerings = [
   {
@@ -72,15 +73,33 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="meet">
+      <section className="meet" id="about-sara">
         <div className="wrap meetgrid">
-          <img className="portrait" src="/images/sara.jpg" alt="Sara Norton" />
+          <img className="portrait" src="/images/sara.jpg" alt="Sara Norton smiling, wearing a teal sari blouse and jasmine flowers in her hair" />
           <div>
             <h2>Hello, I'm Sara Norton</h2>
             <p>I am a qualified Ayurveda Practitioner, Yoga Teacher and Yoga Therapist. My professional training took place in many different schools in Rishikesh and Kerala, India, where I immersed myself in the study and practice of these traditional systems of wellbeing.</p>
-            <p>My work is practical and compassionate, with a deep respect for each person’s individual nature.</p>
-            <Link className="textlink" href="/about">More about my work</Link>
+            <p>My work brings together the wisdom of Ayurveda, the therapeutic application of yoga, and a deep respect for each person’s individual nature. I offer practical, compassionate guidance to help you understand your constitution, support balance in daily life and develop sustainable practices for long term wellbeing.</p>
+            <p>Through personalised consultations, yoga therapy, food tables and dietary guidance, seasonal self care and mindful daily routines, I support people to reconnect with their bodies, settle their minds and live with greater vitality and ease.</p>
+            <p className="muted">Find us at <a className="textlink" href="https://www.thearthousevictoriafalls.com/" target="_blank" rel="noopener noreferrer">The Art House</a>, 360 Gibson Road, Victoria Falls.</p>
           </div>
+        </div>
+        <div className="wrap narrow" style={{ marginTop: 36 }}>
+          <h3>Training and Qualifications</h3>
+          <ul className="list">
+            <li>Qualified Ayurveda Practitioner</li><li>Qualified Yoga Teacher</li><li>Qualified Yoga Therapist</li><li>Training in many different schools in Rishikesh and Kerala, India</li>
+          </ul>
+          <Certificates />
+        </div>
+        <div className="wrap narrow faq" style={{ marginTop: 36 }}>
+          <h3>Frequently Asked Questions</h3>
+          <details><summary>What is Ayurveda?</summary><p>Ayurveda is an ancient system of holistic health that teaches us how to live in harmony with our individual nature and with the changing rhythms of the seasons.</p></details>
+          <details><summary>What happens in a consultation?</summary><p>We explore your natural constitution, current imbalances, digestion, sleep, energy, daily routine and relationship with food. You receive practical recommendations that may include diet, daily rhythms, seasonal self care, yoga, breathing practices and herbs where appropriate.</p></details>
+          <details><summary>Are consultations available online?</summary><p>Yes. Consultations are available in person and online.</p></details>
+          <details><summary>Do I need yoga experience for yoga therapy?</summary><p>No. Sessions are adapted to your needs, experience and capacity, using poses, breath, relaxation, meditation and mudras.</p></details>
+          <details><summary>What is Chavutti Uzhichil?</summary><p>A traditional Kerala bodywork practice rooted in Kalarippayattu, using warm oil and controlled foot pressure, supported by a suspended rope. <Link className="textlink" href="/treatments">Read more</Link>.</p></details>
+          <details><summary>Where are you based and how do I book?</summary><p>Sessions are by appointment at The Art House, 360 Gibson Road, Victoria Falls. Use the booking form, or call or WhatsApp +263 77 260 6233.</p></details>
+          <details><summary>Is food provided on retreats?</summary><p>Yes. Retreats and workshops serve food from the tri-dosha balanced recipes in our recipe book, From Our Kitchen, which is available to clients and to guests of retreats.</p></details>
         </div>
       </section>
 
@@ -92,7 +111,7 @@ export default function Home() {
               <img className={"oimg v" + i} src={o.img} alt={o.alt} loading="lazy" />
               <div>
                 <h3>{o.title}</h3>
-                {o.text.map((t) => <p key={t}>{t}</p>)}
+                {o.text.map((t, k) => <p key={t} className={i === 0 && k === 0 ? "smallp" : undefined}>{t}</p>)}
                 <Link className="textlink" href={o.href}>{o.cta}</Link>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ReadMore from "@/components/ReadMore";
 import PageHead from "@/components/PageHead";
+import Fig from "@/components/Fig";
 export const metadata = { title: "Yoga Therapy", description: "Private yoga therapy sessions adapted to your needs, with Sara Norton." };
 export default function Page() {
   return (<>
@@ -12,7 +13,7 @@ export default function Page() {
       <p>Yoga therapy is very personal and meant to teach you to form your own independent practise.</p>
       <Link className="btn" href="/contact#book">Book a yoga therapy session</Link>
      </ReadMore>
-     <div className="pair"><img className="photo" src="/images/boat.jpg" alt="Boat pose, legs and arms lifted" loading="lazy" /><img className="photo" src="/images/smoke.jpg" alt="Incense burner held above a guided relaxation" loading="lazy" style={{ marginTop: 40 }} /></div>
+     <div className="pair stack"><Fig src="/images/boat.jpg" cap="Boat pose, strengthening the core" /><Fig src="/images/smoke.jpg" cap="Incense burner held over a guided relaxation" /></div>
     </div></section>
   </>);
 }

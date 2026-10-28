@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import base from "@/lib/gallery.json";
 import { mediaUrl } from "../useContent";
+import certBase from "@/lib/certs.json";
+import useCrop from "../Cropper";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 const KEY = "sfAdminToken";
@@ -38,13 +40,14 @@ export default function AdminApp() {
           <div className="row"><a className="btn" href="/">Edit website</a><button className="backbtn" onClick={logout}>Sign out</button></div>
         </div>
         <div className="tabs">
-          {[["bookings", "Bookings"], ["events", "Events"], ["gallery", "Gallery"], ["settings", "Contact details"]].map(([k, l]) => (
+          {[["bookings", "Bookings"], ["events", "Events"], ["gallery", "Gallery"], ["certs", "Certificates"], ["settings", "Contact details"]].map(([k, l]) => (
             <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
         {tab === "bookings" && <Bookings api={api} />}
         {tab === "events" && <Events api={api} />}
-        {tab === "gallery" && <GalleryAdmin api={api} token={token} />}
+        {tab === "gallery" && <GalleryAdmin api={api} />}
+        {tab === "certs" && <CertAdmin api={api} />}
         {tab === "settings" && <Settings api={api} />}
       </div>
     </section>
@@ -169,60 +172,123 @@ function BookingForm({ init, onSave, onCancel }) {
 }
 
 const CATS = ["Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
-function GalleryAdmin({ api, token }) {
+const GALIAS = { Gatherings: "In class", Tea: "Nutrition" };
+function GalleryAdmin({ api }) {
   const [c, setC] = useState(null);
   const [cat, setCat] = useState("In class");
+  const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sel, setSel] = useState(null);
+  const [cropEl, ask] = useCrop();
   const [note, show] = useNotice();
   useEffect(() => { api("content").then((d) => setC(d.content)).catch((e) => show("err", e.message)); }, [api]);
   if (!c) return <p>Loading…</p>;
-  const rm = new Set(c.gallery.remove);
-  const all = [...c.gallery.add.map((a) => ({ ...a, added: true })), ...base].filter((p) => !rm.has(p.src));
-  const del = (p) => setC({ ...c, gallery: p.added ? { ...c.gallery, add: c.gallery.add.filter((a) => a.src !== p.src) } : { ...c.gallery, remove: [...c.gallery.remove, p.src] } });
-  const shrink = (file) => new Promise((ok, no) => {
-    const im = new Image(), u = URL.createObjectURL(file);
-    im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL("image/jpeg", 0.85)); };
-    im.onerror = () => no(new Error("Could not read an image")); im.src = u;
-  });
+  const rm = new Set(c.gallery.remove), ed = c.gallery.edit || {};
+  const all = [...c.gallery.add.map((a) => ({ ...a, added: true })), ...base].filter((p) => !rm.has(p.src))
+    .map((p) => { const e = ed[p.src] || {}; return { ...p, cat: e.cat || GALIAS[p.cat] || p.cat, desc: e.desc ?? p.desc ?? "" }; });
+  const del = (p) => { setC({ ...c, gallery: p.added ? { ...c.gallery, add: c.gallery.add.filter((a) => a.src !== p.src) } : { ...c.gallery, remove: [...c.gallery.remove, p.src] } }); setSel(null); };
+  const change = (p, k, v) => setC((o) => ({ ...o, gallery: p.added
+    ? { ...o.gallery, add: o.gallery.add.map((a) => (a.src === p.src ? { ...a, [k]: v } : a)) }
+    : { ...o.gallery, edit: { ...(o.gallery.edit || {}), [p.src]: { cat: p.cat, desc: p.desc, ...((o.gallery.edit || {})[p.src] || {}), [k]: v } } } }));
   async function upload(e) {
     const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
     setBusy(true);
     try {
       const add = [];
-      for (const f of files) { const r = await api("upload", { method: "POST", body: { data: await shrink(f) } }); add.push({ src: r.url, cat }); }
-      setC((p) => ({ ...p, gallery: { ...p.gallery, add: [...add, ...p.gallery.add] } })); show("ok", `${add.length} photo(s) uploaded. Press Save to publish.`);
+      for (const f of files) {
+        const data = await ask(f); if (!data) continue;
+        const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, cat, desc });
+      }
+      if (add.length) { setC((p) => ({ ...p, gallery: { ...p.gallery, add: [...add, ...p.gallery.add] } })); show("ok", `${add.length} photo(s) added. Press Save changes to publish.`); }
     } catch (er) { show("err", er.message); } finally { setBusy(false); }
   }
   async function save() {
     setBusy(true);
     try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The Gallery page will update shortly."); } catch (er) { show("err", er.message); } finally { setBusy(false); }
   }
+  const cur = sel && all.find((p) => p.src === sel);
   return (
     <>
-      {note}
+      {note}{cropEl}
       <div className="admbar">
         <select value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select>
+        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description for new photos" maxLength={200} />
         <label className="btn" style={{ cursor: "pointer" }}>{busy ? "Working…" : "Add photos"}<input type="file" accept="image/*" multiple hidden onChange={upload} disabled={busy} /></label>
         <button className="btn" onClick={save} disabled={busy}>Save changes</button>
       </div>
-      <p className="muted">New photos go into the category chosen above. Tap the cross to remove a photo, then Save.</p>
+      <p className="muted">Each new photo opens a crop screen first. Tap any photo to edit its category and description, or delete it. Then press Save changes.</p>
+      {cur && (
+        <div className="bcard">
+          <div className="row" style={{ alignItems: "center" }}>
+            <img src={mediaUrl(cur.src)} alt="" style={{ height: 90, borderRadius: 8 }} />
+            <select value={cur.cat} onChange={(e) => change(cur, "cat", e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select>
+            <input style={{ flex: 1, minWidth: 180 }} value={cur.desc} placeholder="Describe this photo" maxLength={200} onChange={(e) => change(cur, "desc", e.target.value)} />
+            <button type="button" className="backbtn" onClick={() => del(cur)}>Delete photo</button>
+            <button type="button" className="backbtn" onClick={() => setSel(null)}>Done</button>
+          </div>
+        </div>
+      )}
       <div className="agrid">
         {all.map((p) => (
-          <div key={p.src} className="aph"><img src={mediaUrl(p.src)} alt="" loading="lazy" /><button onClick={() => del(p)} aria-label="Remove photo">✕</button><span>{p.cat}</span></div>
+          <div key={p.src} className={"aph" + (sel === p.src ? " on" : "")}><img src={mediaUrl(p.src)} alt={p.desc || ""} loading="lazy" onClick={() => setSel(p.src)} /><button onClick={() => del(p)} aria-label="Remove photo">✕</button><span>{p.cat}</span></div>
         ))}
       </div>
     </>
   );
 }
 
+function CertAdmin({ api }) {
+  const [c, setC] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [cropEl, ask] = useCrop();
+  const [note, show] = useNotice();
+  useEffect(() => { api("content").then((d) => setC(d.content)).catch((e) => show("err", e.message)); }, [api]);
+  if (!c) return <p>Loading…</p>;
+  const ct = c.certs || { add: [], remove: [], edit: {} };
+  const rm = new Set(ct.remove), ed = ct.edit || {};
+  const all = [...(ct.add || []).map((x) => ({ ...x, added: true })), ...certBase].filter((x) => !rm.has(x.src)).map((x) => ({ ...x, title: ed[x.src] ?? x.title }));
+  const put = (f) => setC((o) => ({ ...o, certs: f(o.certs || { add: [], remove: [], edit: {} }) }));
+  const rename = (x, v) => put((o) => (x.added ? { ...o, add: o.add.map((a) => (a.src === x.src ? { ...a, title: v } : a)) } : { ...o, edit: { ...(o.edit || {}), [x.src]: v } }));
+  const del = (x) => put((o) => (x.added ? { ...o, add: o.add.filter((a) => a.src !== x.src) } : { ...o, remove: [...o.remove, x.src] }));
+  async function upload(e) {
+    const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+    setBusy(true);
+    try {
+      const add = [];
+      for (const f of files) { const data = await ask(f); if (!data) continue; const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, title: "New certificate" }); }
+      if (add.length) { put((o) => ({ ...o, add: [...add, ...o.add] })); show("ok", "Certificate added. Type its title, then press Save changes."); }
+    } catch (er) { show("err", er.message); } finally { setBusy(false); }
+  }
+  async function save() {
+    setBusy(true);
+    try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The certificates will update shortly."); } catch (er) { show("err", er.message); } finally { setBusy(false); }
+  }
+  return (
+    <>
+      {note}{cropEl}
+      <div className="admbar">
+        <label className="btn" style={{ cursor: "pointer" }}>{busy ? "Working…" : "Add certificate"}<input type="file" accept="image/*" hidden onChange={upload} disabled={busy} /></label>
+        <button className="btn" onClick={save} disabled={busy}>Save changes</button>
+      </div>
+      <p className="muted">Certificates appear on the Home page under Hello, I'm Sara. Edit a title, or delete a certificate, then press Save changes.</p>
+      {all.map((x) => (
+        <div className="bcard" key={x.src}>
+          <div className="row" style={{ alignItems: "center" }}>
+            <img src={mediaUrl(x.src)} alt="" style={{ height: 80, borderRadius: 8 }} />
+            <input style={{ flex: 1, minWidth: 200 }} value={x.title} maxLength={200} onChange={(e) => rename(x, e.target.value)} />
+            <button type="button" className="backbtn" onClick={() => del(x)}>Delete</button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 const blank = { title: "", date: "", location: "", description: "", image: "", link: "" };
-const shrinkImg = (file) => new Promise((ok, no) => {
-  const im = new Image(), u = URL.createObjectURL(file);
-  im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL("image/jpeg", 0.85)); };
-  im.onerror = () => no(new Error("Could not read that image")); im.src = u;
-});
+
 function Events({ api }) {
   const [list, setList] = useState(null);
+  const [cropEl, ask] = useCrop();
   const [busy, setBusy] = useState(false);
   const [note, show] = useNotice();
   useEffect(() => { api("events").then((d) => setList(d.events)).catch((e) => { setList([]); show("err", e.message); }); }, [api]);
@@ -232,7 +298,7 @@ function Events({ api }) {
   async function pic(i, e) {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     setBusy(true);
-    try { const r = await api("upload", { method: "POST", body: { data: await shrinkImg(f) } }); set(i, "image", r.url); show("ok", "Poster added. Press Save changes to publish."); }
+    try { const data = await ask(f); if (!data) return; const r = await api("upload", { method: "POST", body: { data } }); set(i, "image", r.url); show("ok", "Poster added. Press Save changes to publish."); }
     catch (er) { show("err", er.message); } finally { setBusy(false); }
   }
   async function save() {
@@ -242,6 +308,7 @@ function Events({ api }) {
   }
   return (
     <>
+      {cropEl}
       <p className="muted">These appear on the Home page and on the Retreats page under Upcoming Offerings. Add a poster or photo to advertise each one. With none listed, the standard list is shown.</p>
       {note}
       {list.map((e, i) => (

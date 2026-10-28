@@ -284,13 +284,20 @@ const cleanContent = (b = {}) => {
     .map(([k, v]) => [String(k).slice(0, 200), String(v ?? "").slice(0, vmax)]));
   const arr = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
   const g = b.gallery || {};
+  const c = b.certs || {};
   return {
     text: obj(b.text, 1500, 3000),
     img: obj(b.img, 300, 300),
     hide: arr(b.hide, 500).map((k) => String(k).slice(0, 200)),
     gallery: {
-      add: arr(g.add, 600).map((x) => ({ src: t(x && x.src, 300), cat: t(x && x.cat, 30) || "In class" })).filter((x) => x.src),
+      add: arr(g.add, 600).map((x) => ({ src: t(x && x.src, 300), cat: t(x && x.cat, 30) || "In class", desc: t(x && x.desc, 200) })).filter((x) => x.src),
       remove: arr(g.remove, 600).map((x) => t(x, 300)),
+      edit: Object.fromEntries(Object.entries(g.edit && typeof g.edit === "object" ? g.edit : {}).slice(0, 800).map(([k, v]) => [t(k, 300), { cat: t(v && v.cat, 30), desc: t(v && v.desc, 200) }])),
+    },
+    certs: {
+      add: arr(c.add, 60).map((x) => ({ src: t(x && x.src, 300), title: t(x && x.title, 200) })).filter((x) => x.src),
+      remove: arr(c.remove, 60).map((x) => t(x, 300)),
+      edit: Object.fromEntries(Object.entries(c.edit && typeof c.edit === "object" ? c.edit : {}).slice(0, 80).map(([k, v]) => [t(k, 300), t(v, 200)])),
     },
   };
 };

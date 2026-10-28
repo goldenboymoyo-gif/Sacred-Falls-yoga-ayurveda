@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { API, loadContent, mediaUrl } from "./useContent";
 import { nav } from "@/lib/site";
+import useCrop from "./Cropper";
 
 const TEXT = "h1,h2,h3,h4,h5,h6,p,li,a,button,span,label,figcaption,blockquote,small,strong,em,dt,dd";
 const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
@@ -52,6 +53,7 @@ export default function SiteEditor() {
   const [token, setToken] = useState(null);
   const [edit, setEdit] = useState(false);
   const [msg, setMsg] = useState("");
+  const [cropEl, ask] = useCrop();
   const [dirty, setDirty] = useState(0);
   const content = useRef(null);
   const items = useRef([]);
@@ -136,7 +138,7 @@ export default function SiteEditor() {
       const f = inp.files && inp.files[0]; if (!f) return;
       setMsg("Uploading photo…");
       try {
-        const data = await shrink(f);
+        const data = await ask(f); if (!data) { setMsg(""); return; }
         const r = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || "Upload failed");
@@ -177,6 +179,8 @@ export default function SiteEditor() {
   const go = (href) => { if (dirty && !confirm("You have unsaved changes. Leave this page?")) return; router.push(href); };
   if (!edit) return <button className="sfbar sffab" onClick={() => setEdit(true)}>Edit this page</button>;
   return (
+    <>
+    {cropEl}
     <div className="sfbar">
       <select value={nav.some((n) => n.href === path) ? path : ""} onChange={(e) => go(e.target.value)} aria-label="Go to page">
         {!nav.some((n) => n.href === path) && <option value="">Page…</option>}
@@ -189,5 +193,6 @@ export default function SiteEditor() {
       <button onClick={() => { if (!dirty || confirm("Exit and lose unsaved changes?")) { pending.current = { text: {}, img: {} }; setDirty(0); setEdit(false); location.reload(); } }}>Exit</button>
       {msg && <span className="sfmsg">{msg}</span>}
     </div>
+    </>
   );
 }
