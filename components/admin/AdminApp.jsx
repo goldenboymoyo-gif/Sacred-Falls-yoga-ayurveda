@@ -203,6 +203,35 @@ function GalleryAdmin({ api }) {
       if (add.length) { setC((p) => ({ ...p, gallery: { ...p.gallery, add: [...add, ...p.gallery.add] } })); show("ok", `${add.length} photo(s) added. Press Save changes to publish.`); }
     } catch (er) { show("err", er.message); } finally { setBusy(false); }
   }
+  const [prog, setProg] = useState("");
+  const shrink = (f) => new Promise((res, rej) => {
+    const im = new Image(), u = URL.createObjectURL(f);
+    im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); res(cv.toDataURL("image/jpeg", 0.85)); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("bad")); };
+    im.src = u;
+  });
+  // many photos / a whole folder, no cropping, saved automatically
+  async function bulk(e) {
+    const files = [...e.target.files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name)); e.target.value = "";
+    if (!files.length) { show("err", "No images found in that selection."); return; }
+    setBusy(true); const add = []; let done = 0, failed = 0, i = 0;
+    const worker = async () => {
+      while (i < files.length) {
+        const f = files[i++];
+        try { const data = await shrink(f); const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, cat, desc }); }
+        catch { failed++; }
+        setProg(`Uploading ${++done} of ${files.length}…`);
+      }
+    };
+    try {
+      await Promise.all([worker(), worker(), worker()]);
+      if (add.length) {
+        const next = { ...c, gallery: { ...c.gallery, add: [...add, ...c.gallery.add] } };
+        const r = await api("content", { method: "PUT", body: { content: next } }); setC(r.content);
+      }
+      show(failed ? "err" : "ok", `${add.length} photo(s) added and saved${failed ? `, ${failed} failed (try those again)` : ""}.`);
+    } catch (er) { show("err", er.message); } finally { setBusy(false); setProg(""); }
+  }
   async function save() {
     setBusy(true);
     try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The Gallery page will update shortly."); } catch (er) { show("err", er.message); } finally { setBusy(false); }
@@ -214,7 +243,9 @@ function GalleryAdmin({ api }) {
       <div className="admbar">
         <select value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select>
         <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description for new photos" maxLength={200} />
-        <label className="btn" style={{ cursor: "pointer" }}>{busy ? "Working…" : "Add photos"}<input type="file" accept="image/*" multiple hidden onChange={upload} disabled={busy} /></label>
+        <label className="btn" style={{ cursor: "pointer" }}>{busy ? (prog || "Working…") : "Upload a folder"}<input type="file" accept="image/*" multiple hidden webkitdirectory="" directory="" onChange={bulk} disabled={busy} /></label>
+        <label className="btn" style={{ cursor: "pointer" }}>Upload many photos<input type="file" accept="image/*" multiple hidden onChange={bulk} disabled={busy} /></label>
+        <label className="btn" style={{ cursor: "pointer" }}>Add photos (crop each)<input type="file" accept="image/*" multiple hidden onChange={upload} disabled={busy} /></label>
         <button className="btn" onClick={save} disabled={busy}>Save changes</button>
       </div>
       <p className="muted">Each new photo opens a crop screen first. Tap any photo to edit its category and description, or delete it. Then press Save changes.</p>
