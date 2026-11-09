@@ -14,6 +14,7 @@ export default function Page() {
       <div>
         <h2>Contact</h2>
         <ContactDetails />
+        <p className="muted">Sessions are by appointment at <a className="textlink" href="https://www.thearthousevictoriafalls.com/" target="_blank" rel="noopener noreferrer">The Art House</a>, 360 Gibson Road, Victoria Falls.</p>
       </div>
     </div></section>
   </>);

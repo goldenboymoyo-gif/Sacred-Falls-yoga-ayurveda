@@ -98,7 +98,7 @@ export default function Home() {
           <details><summary>Are consultations available online?</summary><p>Yes. Consultations are available in person and online.</p></details>
           <details><summary>Do I need yoga experience for yoga therapy?</summary><p>No. Sessions are adapted to your needs, experience and capacity, using poses, breath, relaxation, meditation and mudras.</p></details>
           <details><summary>What is Chavutti Uzhichil?</summary><p>A traditional Kerala bodywork practice rooted in Kalarippayattu, using warm oil and controlled foot pressure, supported by a suspended rope. <Link className="textlink" href="/treatments">Read more</Link>.</p></details>
-          <details><summary>Where are you based and how do I book?</summary><p>Sessions are by appointment at The Art House, 360 Gibson Road, Victoria Falls. Use the booking form, or call or WhatsApp +263 77 260 6233.</p></details>
+          <details><summary>Where are you based and how do I book?</summary><p>Sessions are by appointment at <a className="textlink" href="https://www.thearthousevictoriafalls.com/" target="_blank" rel="noopener noreferrer">The Art House</a>, 360 Gibson Road, Victoria Falls. Use the booking form, or call or WhatsApp +263 77 260 6233.</p></details>
           <details><summary>Is food provided on retreats?</summary><p>Yes. Retreats and workshops serve food from the tri-dosha balanced recipes in our recipe book, From Our Kitchen, which is available to clients and to guests of retreats.</p></details>
         </div>
       </section>
