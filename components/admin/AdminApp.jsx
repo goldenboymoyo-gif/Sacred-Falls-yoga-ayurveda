@@ -12,7 +12,7 @@ const STATUS = ["new", "confirmed", "done", "archived"];
 export default function AdminApp() {
   const [token, setToken] = useState(null);
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState("bookings");
+  const [tab, setTab] = useState("pages");
 
   useEffect(() => { try { setToken(sessionStorage.getItem(KEY)); } catch {} setReady(true); }, []);
   const logout = useCallback(() => { try { sessionStorage.removeItem(KEY); } catch {} setToken(null); }, []);
@@ -40,10 +40,11 @@ export default function AdminApp() {
           <div className="row"><a className="btn" href="/">Edit website</a><button className="backbtn" onClick={logout}>Sign out</button></div>
         </div>
         <div className="tabs">
-          {[["bookings", "Bookings"], ["events", "Events"], ["gallery", "Gallery"], ["certs", "Certificates"], ["settings", "Contact details"]].map(([k, l]) => (
+          {[["pages", "Edit pages"], ["bookings", "Bookings"], ["events", "Events"], ["gallery", "Gallery"], ["certs", "Certificates"], ["settings", "Contact details"]].map(([k, l]) => (
             <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
+        {tab === "pages" && <EditPages />}
         {tab === "bookings" && <Bookings api={api} />}
         {tab === "events" && <Events api={api} />}
         {tab === "gallery" && <GalleryAdmin api={api} />}
@@ -362,5 +363,24 @@ function Settings({ api }) {
       <button className="btn" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
       {note}
     </form>
+  );
+}
+
+function EditPages() {
+  const pages = [["/", "Home"], ["/ayurveda", "Food & Nutrition"], ["/treatments", "Treatments"], ["/yoga-therapy", "Yoga Therapy"], ["/retreats", "Retreats"], ["/food", "Food"], ["/gallery", "Gallery"], ["/contact", "Contact"]];
+  return (
+    <div>
+      <p>Pick a page to edit it directly. On the page you can:</p>
+      <ul>
+        <li>Click any text and type to change it.</li>
+        <li>Click a photo, then <b>Replace photo</b>, and choose from the website gallery or upload a new one.</li>
+        <li>Select anything, then use <b>+ Add photo below</b> or <b>+ Add paragraph below</b>. <b>Delete added item</b> removes things you added; <b>Hide / show</b> hides original content.</li>
+        <li>On the Gallery page you can add, delete and re-label photos.</li>
+        <li>Press <b>Save</b> when you are done.</li>
+      </ul>
+      <div className="row" style={{ flexWrap: "wrap", gap: ".5rem" }}>
+        {pages.map(([h, l]) => <a key={h} className="btn" href={`${h}?edit=1`}>{l}</a>)}
+      </div>
+    </div>
   );
 }

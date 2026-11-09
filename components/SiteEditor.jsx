@@ -4,10 +4,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { API, loadContent, mediaUrl } from "./useContent";
 import { nav } from "@/lib/site";
 import useCrop from "./Cropper";
+import usePicker from "./PhotoPicker";
 
 const TEXT = "h1,h2,h3,h4,h5,h6,p,li,a,button,span,label,figcaption,blockquote,small,strong,em,dt,dd";
 const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
-const skip = (el) => el.closest(".adm,.lightbox,[data-noedit],.sfbar");
+const skip = (el) => el.closest(".adm,.lightbox,[data-noedit],.sfbar,[data-add]");
 
 // Walk the page and give every text leaf / image a stable key: scope|index|hash(original)
 function scan(path) {
@@ -29,6 +30,11 @@ function scan(path) {
       } else if (el.children.length) {
         ti++; // keep indexes stable for mixed elements
       }
+    });
+    root.querySelectorAll("[data-add]").forEach((w) => {
+      const k = "add|" + w.dataset.add;
+      const el = w.tagName === "FIGURE" ? w.querySelector("img") : w;
+      if (el) out.push({ el, type: el.tagName === "IMG" ? "img" : "text", key: k, unit: w });
     });
   }
   return out;
@@ -56,6 +62,8 @@ export default function SiteEditor() {
   const [edit, setEdit] = useState(false);
   const [msg, setMsg] = useState("");
   const [cropEl, ask] = useCrop();
+  const [pickEl, choose] = usePicker();
+  const addedRef = useRef(null);
   const [dirty, setDirty] = useState(0);
   const content = useRef(null);
   const items = useRef([]);
@@ -68,11 +76,24 @@ export default function SiteEditor() {
   const editRef = useRef(false);
   editRef.current = edit;
 
-  useEffect(() => { try { setToken(sessionStorage.getItem("sfAdminToken")); } catch {} }, []);
+  useEffect(() => { try { const t = sessionStorage.getItem("sfAdminToken"); setToken(t); if (t && /[?&]edit=1/.test(location.search)) setEdit(true); } catch {} }, []);
 
   const apply = useCallback(() => {
     const c = content.current; if (!c) return;
+    if (!addedRef.current) addedRef.current = JSON.parse(JSON.stringify(c.added || []));
     items.current = scan(path);
+    let injected = false;
+    addedRef.current.forEach((a) => {
+      if (document.querySelector(`[data-add="${a.id}"]`)) return;
+      const tgt = items.current.find((i) => i.key === a.after); if (!tgt) return;
+      const base = tgt.unit || tgt.el.closest("figure.fig,p,li,h1,h2,h3,h4,h5,h6") || tgt.el;
+      let anchor = base; while (anchor.nextElementSibling && anchor.nextElementSibling.dataset.add) anchor = anchor.nextElementSibling;
+      let w;
+      if (a.type === "img") { w = document.createElement("figure"); w.className = "fig"; const im = document.createElement("img"); im.src = mediaUrl(a.src); im.alt = ""; im.loading = "lazy"; w.appendChild(im); }
+      else { w = document.createElement("p"); w.textContent = a.text; }
+      w.dataset.add = a.id; anchor.after(w); injected = true;
+    });
+    if (injected) items.current = scan(path);
     if (!hideRef.current) hideRef.current = new Set(c.hide || []);
     const hide = hideRef.current;
     if (!layoutRef.current) layoutRef.current = JSON.parse(JSON.stringify(c.layout || {}));
@@ -107,6 +128,7 @@ export default function SiteEditor() {
       const h = hide.has(key);
       el.classList.toggle("sf-hidden", h && !editRef.current);
       el.classList.toggle("sf-ghost", h && editRef.current);
+      if (editRef.current) { el.classList.add(type === "img" ? "sf-img" : "sf-text"); if (type === "text") { el.contentEditable = "true"; el.spellcheck = false; } }
     });
   }, [path]);
 
@@ -146,7 +168,7 @@ export default function SiteEditor() {
     };
     const onInput = (e) => {
       const it = items.current.find((i) => i.el === e.target || i.el.contains(e.target));
-      if (it && it.type === "text") { pending.current.text[it.key] = it.el.textContent; setDirty((d) => d + 1); }
+      if (it && it.type === "text") { pending.current.text[it.key] = it.el.textContent; if (it.key.startsWith("add|")) { const a = addedRef.current.find((x) => "add|" + x.id === it.key); if (a) a.text = it.el.textContent; } setDirty((d) => d + 1); }
     };
     const onKey = (e) => { if (e.key === "Enter" && e.target.isContentEditable) { e.preventDefault(); e.target.blur(); } };
     const onPaste = (e) => { if (e.target.isContentEditable) { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData || window.clipboardData).getData("text/plain")); } };
@@ -162,21 +184,46 @@ export default function SiteEditor() {
     };
   }, [edit, path, apply]);
 
-  function pick(it) {
-    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
-    inp.onchange = async () => {
-      const f = inp.files && inp.files[0]; if (!f) return;
-      setMsg("Uploading photo…");
-      try {
-        const data = await ask(f); if (!data) { setMsg(""); return; }
-        const r = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.error || "Upload failed");
-        pending.current.img[it.key] = j.url; it.el.setAttribute("src", mediaUrl(j.url)); it.el.removeAttribute("srcset");
-        setDirty((d) => d + 1); setMsg("Photo ready. Press Save to publish.");
-      } catch (e) { setMsg(e.message); }
-    };
-    inp.click();
+  // choose from website gallery or upload (crop first); returns a stored path/url or null
+  async function chooseImage() {
+    const r = await choose(); if (!r) return null;
+    if (r.src) return r.src;
+    setMsg("Uploading photo…");
+    const data = await ask(r.file); if (!data) { setMsg(""); return null; }
+    const x = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
+    const j = await x.json().catch(() => ({}));
+    if (!x.ok) throw new Error(j.error || "Upload failed");
+    return j.url;
+  }
+  async function pick(it) {
+    try {
+      const u = await chooseImage(); if (!u) return;
+      pending.current.img[it.key] = u; it.el.setAttribute("src", mediaUrl(u)); it.el.removeAttribute("srcset");
+      if (it.key.startsWith("add|")) { const a = addedRef.current.find((x) => "add|" + x.id === it.key); if (a) a.src = u; }
+      setDirty((d) => d + 1); setMsg("Photo ready. Press Save to publish.");
+    } catch (e) { setMsg(e.message); }
+  }
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  async function addPhotoBelow() {
+    const it = need(); if (!it) return;
+    try {
+      const u = await chooseImage(); if (!u) return;
+      addedRef.current.push({ id: newId(), after: it.key, type: "img", src: u, text: "" });
+      apply(); setDirty((d) => d + 1); setMsg("Photo added below. Press Save to publish.");
+    } catch (e) { setMsg(e.message); }
+  }
+  function addTextBelow() {
+    const it = need(); if (!it) return;
+    addedRef.current.push({ id: newId(), after: it.key, type: "p", src: "", text: "New paragraph, click to edit" });
+    apply(); setDirty((d) => d + 1); setMsg("Paragraph added below. Click it to type. Press Save to publish.");
+  }
+  function removeSel() {
+    const it = need(); if (!it) return;
+    if (!it.key.startsWith("add|")) { setMsg("Only things you added can be deleted. Use Hide / show for the original content."); return; }
+    const id = it.key.slice(4);
+    addedRef.current = addedRef.current.filter((a) => a.id !== id);
+    document.querySelectorAll(`[data-add="${id}"]`).forEach((n) => n.remove());
+    sel.current = null; setSelT(""); apply(); setDirty((d) => d + 1); setMsg("Deleted. Press Save to publish.");
   }
 
   const cur = () => (sel.current ? (layoutRef.current[sel.current.key] || {}) : {});
@@ -207,12 +254,14 @@ export default function SiteEditor() {
       const cur = (await g.json()).content;
       const p = pending.current;
       const next = { ...cur, text: { ...cur.text, ...p.text }, img: { ...cur.img, ...p.img },
-        hide: [...(hideRef.current || [])], layout: layoutRef.current };
+        hide: [...(hideRef.current || [])], layout: layoutRef.current, added: addedRef.current || [] };
+      Object.keys(next.text).forEach((k) => k.startsWith("add|") && delete next.text[k]);
+      Object.keys(next.img).forEach((k) => k.startsWith("add|") && delete next.img[k]);
       // revert-to-original means no override needed
       Object.keys(next.text).forEach((k) => { const it = items.current.find((i) => i.key === k); if (it && it.el.dataset.o === next.text[k]) delete next.text[k]; });
       const r = await fetch(`${API}/api/admin/content`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ content: next }) });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Save failed");
-      content.current = (await r.json()).content; hideRef.current = new Set(content.current.hide);
+      content.current = (await r.json()).content; hideRef.current = new Set(content.current.hide); addedRef.current = JSON.parse(JSON.stringify(content.current.added || []));
       pending.current = { text: {}, img: {} };
       setDirty(0); setMsg("Saved. Visitors see it within about a minute.");
     } catch (e) { setMsg(e.message); }
@@ -223,7 +272,7 @@ export default function SiteEditor() {
   if (!edit) return <button className="sfbar sffab" onClick={() => setEdit(true)}>Edit this page</button>;
   return (
     <>
-    {cropEl}
+    {cropEl}{pickEl}
     <div className="sfbar">
       <select value={nav.some((n) => n.href === path) ? path : ""} onChange={(e) => go(e.target.value)} aria-label="Go to page">
         {!nav.some((n) => n.href === path) && <option value="">Page…</option>}
@@ -232,6 +281,7 @@ export default function SiteEditor() {
       <span className="sfhint">Click text to edit it. Click a photo or text to select it, then use the buttons.</span>
       {selT === "text" && <><button onClick={() => bump("fs", -10, 50, 300, 100)}>Text smaller</button><button onClick={() => bump("fs", 10, 50, 300, 100)}>Text bigger</button><button onClick={toggleCols}>Split text in 2 columns</button></>}
       {selT === "img" && <><button onClick={replacePhoto}>Replace photo</button><button onClick={() => bump("w", -10, 20, 100, 100)}>Photo smaller</button><button onClick={() => bump("w", 10, 20, 100, 100)}>Photo bigger</button><button onClick={startMove}>Move photo into text</button><button onClick={putBack}>Put photo back</button></>}
+      <button onClick={addPhotoBelow}>+ Add photo below</button><button onClick={addTextBelow}>+ Add paragraph below</button><button onClick={removeSel}>Delete added item</button>
       <button onClick={toggleHide}>Hide / show selected</button>
       <button className="go" onClick={save}>Save{dirty ? " •" : ""}</button>
       <a href="/admin">Dashboard</a>
