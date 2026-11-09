@@ -151,7 +151,7 @@ export default function SiteEditor() {
     });
     const find = (t) => items.current.find((i) => i.el === t || i.el.contains(t));
     const onClick = (e) => {
-      if (e.target.closest(".sfbar")) return;
+      if (e.target.closest(".sfbar,[data-noedit],.cropback")) return;
       const it = find(e.target);
       const inSite = e.target.closest("header,main,footer");
       if (inSite) { if (e.target.closest("a,button,label,input,select,textarea,summary") || it) e.preventDefault(); }

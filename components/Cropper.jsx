@@ -62,7 +62,7 @@ function CropModal({ file, onDone, onCancel }) {
   }
 
   return (
-    <div className="cropback" role="dialog" aria-modal="true">
+    <div className="cropback" data-noedit role="dialog" aria-modal="true">
       <div className="cropbox">
         <h3>Crop photo</h3>
         {!img ? <p>Loading…</p> : (
