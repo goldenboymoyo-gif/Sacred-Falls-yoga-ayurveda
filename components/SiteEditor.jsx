@@ -100,7 +100,7 @@ export default function SiteEditor() {
     if (!layoutRef.current) layoutRef.current = JSON.parse(JSON.stringify(c.layout || {}));
     const L = layoutRef.current;
     items.current.forEach(({ el, type, key }) => {
-      const l = L[key];
+      const l = type === "img" && el.closest("header,footer") ? undefined : L[key]; // never resize/move the logo
       if (type === "text") {
         el.style.fontSize = l && l.fs ? l.fs + "%" : "";
         if (l && "cols" in l && el.parentElement) { const q = el.parentElement.style; q.columnCount = l.cols > 1 ? "2" : ""; q.columnGap = l.cols > 1 ? "2.2rem" : ""; }
@@ -234,7 +234,7 @@ export default function SiteEditor() {
     apply(); setDirty((d) => d + 1);
   }
   const need = () => { if (!sel.current) { setMsg("Click a text or photo on the page first."); return null; } return sel.current; };
-  const bump = (field, d, lo, hi, base) => { const it = need(); if (!it) return; setLay(it.key, { [field]: Math.min(hi, Math.max(lo, (cur()[field] || base) + d)) }); };
+  const bump = (field, d, lo, hi, base) => { const it = need(); if (!it) return; if (it.el.closest("header,footer")) { setMsg("The logo size is fixed so the menu always looks right."); return; } setLay(it.key, { [field]: Math.min(hi, Math.max(lo, (cur()[field] || base) + d)) }); };
   const toggleCols = () => { const it = need(); if (it) setLay(it.key, { cols: cur().cols === 2 ? 1 : 2 }); };
   const startMove = () => { const it = need(); if (!it) return; movingRef.current = it; setMsg("Now click the paragraph this photo should go under."); };
   const putBack = () => { const it = need(); if (it) setLay(it.key, { at: undefined }); };
