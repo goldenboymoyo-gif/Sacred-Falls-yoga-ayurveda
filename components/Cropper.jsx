@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { exportCanvas, MAXPX } from "@/lib/img";
 
 const ASPECTS = [["Original", 0], ["Square", 1], ["4:3", 4 / 3], ["3:4", 3 / 4], ["16:9", 16 / 9]];
 
@@ -45,20 +46,20 @@ function CropModal({ file, onDone, onCancel }) {
   const up = () => { drag.current = null; };
 
   function apply() {
-    const k = Math.min(1, 1600 / Math.max(FW / s, FH / s));
     const sw = FW / s, sh = FH / s;
+    const k = Math.min(1, MAXPX / Math.max(sw, sh));
     const sx = img.width / 2 - o.x / s - sw / 2, sy = img.height / 2 - o.y / s - sh / 2;
     const out = document.createElement("canvas");
     out.width = Math.round(sw * k); out.height = Math.round(sh * k);
     out.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, out.width, out.height);
-    onDone(out.toDataURL("image/jpeg", 0.86));
+    onDone(exportCanvas(out));
   }
   function whole() {
-    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const k = Math.min(1, MAXPX / Math.max(img.width, img.height));
     const out = document.createElement("canvas");
     out.width = Math.round(img.width * k); out.height = Math.round(img.height * k);
     out.getContext("2d").drawImage(img, 0, 0, out.width, out.height);
-    onDone(out.toDataURL("image/jpeg", 0.86));
+    onDone(exportCanvas(out));
   }
 
   return (

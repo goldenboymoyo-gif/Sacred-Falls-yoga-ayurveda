@@ -4,6 +4,7 @@ import base from "@/lib/gallery.json";
 import useContent, { mediaUrl, API, friendly } from "./useContent";
 import useCrop from "./Cropper";
 import Busy from "./Busy";
+import { shrinkFile } from "@/lib/img";
 
 const cats = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
 const alias = { Gatherings: "In class", Tea: "Nutrition" };
@@ -72,12 +73,7 @@ export default function Gallery() {
     .filter((p) => !rm.has(p.raw || p.src))
     .map((p) => { const e = ed[p.raw || p.src] || {}; const cat = e.cat || alias[p.cat] || p.cat; return { ...p, cat, desc: e.desc || p.desc || DESC[cat] || "Sacred Falls photo" }; });
   const list = photos.filter((p) => cat === "All" || p.cat === cat);
-  const shrink = (f) => new Promise((res, rej) => {
-    const im = new Image(), u = URL.createObjectURL(f);
-    im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); res(cv.toDataURL("image/jpeg", 0.85)); };
-    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("bad")); };
-    im.src = u;
-  });
+  const shrink = shrinkFile;
   async function bulk(e) {
     const files = [...e.target.files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name)); e.target.value = "";
     if (!files.length) { setMsg("No images found in that selection."); return; }

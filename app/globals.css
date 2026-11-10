@@ -389,3 +389,9 @@ nav.main .links a{white-space:nowrap}
 @media(min-width:1261px){nav.main .links{gap:20px}}
 @media(max-width:1260px){header.top .bar{height:76px}header.top .brand img{height:58px!important}nav.main{top:76px!important}}
 @media(max-width:600px){header.top .bar{height:68px}header.top .brand img{height:52px!important}nav.main{top:68px!important}}
+@media(max-width:1260px){header.top .bar{display:flex!important;justify-content:space-between}header.top .burger{margin-left:auto}}
+.addgrid{display:grid;gap:12px;margin:1rem 0;grid-column:auto}
+.addgrid img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:14px;display:block}
+@media(max-width:600px){.addgrid{grid-template-columns:1fr 1fr!important}}
+.pickit{position:relative}.pickit.on{border-color:#b0703a;box-shadow:0 0 0 2px #b0703a inset}
+.pickit .tick{position:absolute;top:4px;right:4px;background:#b0703a;color:#fff;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font-size:.75rem}

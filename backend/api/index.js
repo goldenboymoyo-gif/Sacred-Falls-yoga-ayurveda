@@ -294,7 +294,7 @@ const cleanContent = (b = {}) => {
       remove: arr(g.remove, 600).map((x) => t(x, 300)),
       edit: Object.fromEntries(Object.entries(g.edit && typeof g.edit === "object" ? g.edit : {}).slice(0, 800).map(([k, v]) => [t(k, 300), { cat: t(v && v.cat, 30), desc: t(v && v.desc, 200) }])),
     },
-    added: arr(b.added, 80).map((x) => ({ id: t(x && x.id, 40), after: t(x && x.after, 200), type: x && x.type === "p" ? "p" : "img", src: t(x && x.src, 300), text: t(x && x.text, 3000) })).filter((x) => x.id && x.after),
+    added: arr(b.added, 120).map((x) => ({ id: t(x && x.id, 40), after: t(x && x.after, 200), pos: x && x.pos === "before" ? "before" : "after", type: x && x.type === "p" ? "p" : x && x.type === "grid" ? "grid" : "img", src: t(x && x.src, 300), srcs: arr(x && x.srcs, 12).map((u) => t(u, 300)).filter(Boolean), cols: Math.min(4, Math.max(1, Math.round(Number(x && x.cols) || 2))), text: t(x && x.text, 3000) })).filter((x) => x.id && x.after),
     layout: Object.fromEntries(Object.entries(b.layout && typeof b.layout === "object" ? b.layout : {}).slice(0, 500).map(([k, v]) => {
       const n = (x, lo, hi) => { const y = Number(x); return Number.isFinite(y) ? Math.min(hi, Math.max(lo, Math.round(y))) : undefined; };
       const o = {}; v = v || {};

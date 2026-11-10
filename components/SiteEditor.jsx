@@ -6,6 +6,7 @@ import Busy from "./Busy";
 import { nav } from "@/lib/site";
 import useCrop from "./Cropper";
 import usePicker from "./PhotoPicker";
+import { shrinkFile } from "@/lib/img";
 
 const TEXT = "h1,h2,h3,h4,h5,h6,p,li,a,button,span,label,figcaption,blockquote,small,strong,em,dt,dd";
 const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
@@ -34,6 +35,7 @@ function scan(path) {
     });
     root.querySelectorAll("[data-add]").forEach((w) => {
       const k = "add|" + w.dataset.add;
+      if (w.classList.contains("addgrid")) { out.push({ el: w, type: "grid", key: k, unit: w }); return; }
       const el = w.tagName === "FIGURE" ? w.querySelector("img") : w;
       if (el) out.push({ el, type: el.tagName === "IMG" ? "img" : "text", key: k, unit: w });
     });
@@ -88,11 +90,12 @@ export default function SiteEditor() {
       if (document.querySelector(`[data-add="${a.id}"]`)) return;
       const tgt = items.current.find((i) => i.key === a.after); if (!tgt) return;
       const base = tgt.unit || tgt.el.closest("figure.fig,p,li,h1,h2,h3,h4,h5,h6") || tgt.el;
-      let anchor = base; while (anchor.nextElementSibling && anchor.nextElementSibling.dataset.add) anchor = anchor.nextElementSibling;
+      let anchor = base; if (a.pos !== "before") while (anchor.nextElementSibling && anchor.nextElementSibling.dataset.add) anchor = anchor.nextElementSibling;
       let w;
-      if (a.type === "img") { w = document.createElement("figure"); w.className = "fig"; const im = document.createElement("img"); im.src = mediaUrl(a.src); im.alt = ""; im.loading = "lazy"; w.appendChild(im); }
+      if (a.type === "grid") { w = document.createElement("div"); w.className = "addgrid"; w.style.gridTemplateColumns = `repeat(${a.cols || 2},1fr)`; (a.srcs || []).forEach((u) => { const im = document.createElement("img"); im.src = mediaUrl(u); im.alt = ""; im.loading = "lazy"; w.appendChild(im); }); }
+      else if (a.type === "img") { w = document.createElement("figure"); w.className = "fig"; const im = document.createElement("img"); im.src = mediaUrl(a.src); im.alt = ""; im.loading = "lazy"; w.appendChild(im); }
       else { w = document.createElement("p"); w.textContent = a.text; }
-      w.dataset.add = a.id; anchor.after(w); injected = true;
+      w.dataset.add = a.id; if (a.pos === "before") anchor.before(w); else anchor.after(w); injected = true;
     });
     if (injected) items.current = scan(path);
     if (!hideRef.current) hideRef.current = new Set(c.hide || []);
@@ -100,6 +103,7 @@ export default function SiteEditor() {
     if (!layoutRef.current) layoutRef.current = JSON.parse(JSON.stringify(c.layout || {}));
     const L = layoutRef.current;
     items.current.forEach(({ el, type, key }) => {
+      if (type === "grid") return;
       const l = type === "img" && el.closest("header,footer") ? undefined : L[key]; // never resize/move the logo
       if (type === "text") {
         el.style.fontSize = l && l.fs ? l.fs + "%" : "";
@@ -119,6 +123,7 @@ export default function SiteEditor() {
     });
     items.current.forEach(({ el, type, key }) => {
       const p = pending.current;
+      if (type === "grid") { if (editRef.current) el.classList.add("sf-img"); return; }
       if (type === "text") {
         const v = key in p.text ? p.text[key] : c.text[key];
         if (v !== undefined && el.textContent !== v && document.activeElement !== el) setText(el, v);
@@ -205,19 +210,47 @@ export default function SiteEditor() {
     } catch (e) { setMsg(friendly(e)); }
   }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  async function addPhotoBelow() {
+  async function addPhoto(pos) {
     const it = need(); if (!it) return;
     try {
       const u = await chooseImage(); if (!u) return;
-      addedRef.current.push({ id: newId(), after: it.key, type: "img", src: u, text: "" });
-      apply(); setDirty((d) => d + 1); setMsg("Photo added below. Press Save to publish.");
+      addedRef.current.push({ id: newId(), after: it.key, pos, type: "img", src: u, text: "" });
+      apply(); setDirty((d) => d + 1); setMsg("Photo added. Press Save to publish.");
     } catch (e) { setMsg(friendly(e)); }
   }
-  function addTextBelow() {
+  async function addGrid(pos) {
     const it = need(); if (!it) return;
-    addedRef.current.push({ id: newId(), after: it.key, type: "p", src: "", text: "New paragraph, click to edit" });
-    apply(); setDirty((d) => d + 1); setMsg("Paragraph added below. Click it to type. Press Save to publish.");
+    try {
+      const r = await choose({ multi: true }); if (!r) return;
+      const srcs = [...(r.srcs || [])]; const fs = r.files || [];
+      for (let i = 0; i < fs.length; i++) {
+        setMsg(`Uploading photo ${i + 1} of ${fs.length}…`);
+        const data = await shrinkFile(fs[i]);
+        const x = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ data }) });
+        const j = await x.json().catch(() => ({})); if (!x.ok) throw new Error(j.error || "Upload failed");
+        srcs.push(j.url);
+      }
+      if (!srcs.length) { setMsg(""); return; }
+      addedRef.current.push({ id: newId(), after: it.key, pos, type: "grid", src: "", srcs: srcs.slice(0, 12), cols: Math.min(3, srcs.length), text: "" });
+      apply(); setDirty((d) => d + 1); setMsg("Photo grid added. Press Save to publish.");
+    } catch (e) { setMsg(friendly(e)); }
   }
+  function gridCols() {
+    const it = need(); if (!it || !it.key.startsWith("add|")) return;
+    const a = addedRef.current.find((x) => "add|" + x.id === it.key); if (!a || a.type !== "grid") return;
+    a.cols = (a.cols || 2) >= 4 ? 1 : (a.cols || 2) + 1; it.el.style.gridTemplateColumns = `repeat(${a.cols},1fr)`; setDirty((d) => d + 1);
+  }
+  function addTextBelow(pos) {
+    const it = need(); if (!it) return;
+    addedRef.current.push({ id: newId(), after: it.key, pos, type: "p", src: "", text: "New paragraph, click to edit" });
+    apply(); setDirty((d) => d + 1); setMsg("Paragraph added. Click it to type. Press Save to publish.");
+  }
+  function addMenu(e) {
+    const v = e.target.value; e.target.value = ""; if (!v) return;
+    const [k, pos] = v.split(":");
+    if (k === "photo") addPhoto(pos); else if (k === "grid") addGrid(pos); else addTextBelow(pos);
+  }
+
   function removeSel() {
     const it = need(); if (!it) return;
     if (!it.key.startsWith("add|")) { setMsg("Only things you added can be deleted. Use Hide / show for the original content."); return; }
@@ -282,7 +315,14 @@ export default function SiteEditor() {
       <span className="sfhint">Click text to edit it. Click a photo or text to select it, then use the buttons.</span>
       {selT === "text" && <><button onClick={() => bump("fs", -10, 50, 300, 100)}>Text smaller</button><button onClick={() => bump("fs", 10, 50, 300, 100)}>Text bigger</button><button onClick={toggleCols}>Split text in 2 columns</button></>}
       {selT === "img" && <><button onClick={replacePhoto}>Replace photo</button><button onClick={() => bump("w", -10, 20, 100, 100)}>Photo smaller</button><button onClick={() => bump("w", 10, 20, 100, 100)}>Photo bigger</button><button onClick={startMove}>Move photo into text</button><button onClick={putBack}>Put photo back</button></>}
-      <button onClick={addPhotoBelow}>+ Add photo below</button><button onClick={addTextBelow}>+ Add paragraph below</button><button onClick={removeSel}>Delete added item</button>
+      <select value="" onChange={addMenu} aria-label="Add something">
+        <option value="">+ Add…</option>
+        <option value="photo:before">Photo above selected</option><option value="photo:after">Photo below selected</option>
+        <option value="grid:before">Photo grid above selected</option><option value="grid:after">Photo grid below selected</option>
+        <option value="p:before">Paragraph above selected</option><option value="p:after">Paragraph below selected</option>
+      </select>
+      {selT === "grid" && <button onClick={gridCols}>Grid columns</button>}
+      <button onClick={removeSel}>Delete added item</button>
       <button onClick={toggleHide}>Hide / show selected</button>
       <button className="go" onClick={save}>Save{dirty ? " •" : ""}</button>
       <a href="/admin">Dashboard</a>

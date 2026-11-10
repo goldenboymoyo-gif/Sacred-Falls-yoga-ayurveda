@@ -5,6 +5,7 @@ import { mediaUrl, friendly } from "../useContent";
 import certBase from "@/lib/certs.json";
 import useCrop from "../Cropper";
 import Busy from "../Busy";
+import { shrinkFile } from "@/lib/img";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 const KEY = "sfAdminToken";
@@ -205,12 +206,7 @@ function GalleryAdmin({ api }) {
     } catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   const [prog, setProg] = useState(null);
-  const shrink = (f) => new Promise((res, rej) => {
-    const im = new Image(), u = URL.createObjectURL(f);
-    im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); res(cv.toDataURL("image/jpeg", 0.85)); };
-    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("bad")); };
-    im.src = u;
-  });
+  const shrink = shrinkFile;
   // many photos / a whole folder, no cropping, saved automatically
   async function bulk(e) {
     const files = [...e.target.files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name)); e.target.value = "";
@@ -409,7 +405,7 @@ function EditPages() {
       <ul>
         <li>Click any text and type to change it.</li>
         <li>Click a photo, then <b>Replace photo</b>, and choose from the website gallery or upload a new one.</li>
-        <li>Select anything, then use <b>+ Add photo below</b> or <b>+ Add paragraph below</b>. <b>Delete added item</b> removes things you added; <b>Hide / show</b> hides original content.</li>
+        <li>Click any text or photo to select it, then use <b>+ Add…</b> to put a photo, a <b>photo grid</b> (several photos side by side) or a paragraph above or below it. This also fills empty spaces. <b>Grid columns</b> changes the grid; <b>Delete added item</b> removes things you added; <b>Hide / show</b> hides original content.</li>
         <li>On the Gallery page you can add, delete and re-label photos.</li>
         <li>Press <b>Save</b> when you are done.</li>
       </ul>
