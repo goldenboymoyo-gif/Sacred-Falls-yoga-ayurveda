@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import base from "@/lib/gallery.json";
-import useContent, { mediaUrl, API } from "./useContent";
+import useContent, { mediaUrl, API, friendly } from "./useContent";
 import useCrop from "./Cropper";
+import Busy from "./Busy";
 
 const cats = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
 const alias = { Gatherings: "In class", Tea: "Nutrition" };
@@ -27,6 +28,7 @@ export default function Gallery() {
   const [ncat, setNcat] = useState("In class");
   const [ndesc, setNdesc] = useState("");
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(null); // {text,pct}
   const [cropEl, ask] = useCrop();
   useEffect(() => {
     const f = () => { try { setAdm(!!sessionStorage.getItem("sfAdminToken") && document.body.classList.contains("sfedit")); } catch {} };
@@ -36,7 +38,7 @@ export default function Gallery() {
   }, []);
   const tok = () => sessionStorage.getItem("sfAdminToken");
   async function mutate(fn, ok) {
-    setMsg("Saving…");
+    setMsg(""); setBusy((b) => b || { text: "Saving…" });
     try {
       const h = { Authorization: `Bearer ${tok()}` };
       const g = await fetch(`${API}/api/admin/content`, { headers: h });
@@ -47,7 +49,7 @@ export default function Gallery() {
       const r = await fetch(`${API}/api/admin/content`, { method: "PUT", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ content: cur }) });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Save failed");
       setLive((await r.json()).content); setMsg(ok);
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(friendly(e)); } finally { setBusy(null); }
   }
   async function addPhotos(e) {
     const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
@@ -55,14 +57,14 @@ export default function Gallery() {
       const add = [];
       for (const f of files) {
         const data = await ask(f); if (!data) continue;
-        setMsg("Uploading…");
+        setBusy({ text: "Uploading photo…" });
         const r = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ data }) });
         const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Upload failed");
         add.push({ src: j.url, cat: ncat, desc: ndesc });
       }
       if (add.length) await mutate((g) => { g.add = [...add, ...g.add]; }, `${add.length} photo(s) added to the gallery.`);
       else setMsg("");
-    } catch (er) { setMsg(er.message); }
+    } catch (er) { setMsg(friendly(er)); } finally { setBusy(null); }
   }
   const rm = new Set(ct.gallery.remove);
   const ed = ct.gallery.edit || {};
@@ -80,21 +82,28 @@ export default function Gallery() {
     const files = [...e.target.files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name)); e.target.value = "";
     if (!files.length) { setMsg("No images found in that selection."); return; }
     const add = []; let i = 0, done = 0, failed = 0;
+    setMsg(""); setBusy({ text: `Uploading photo 1 of ${files.length}…`, pct: 3 });
     const worker = async () => {
       while (i < files.length) {
         const f = files[i++];
         try {
-          const data = await shrink(f);
-          const r = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ data }) });
-          const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Upload failed");
-          add.push({ src: j.url, cat: ncat, desc: ndesc });
+          const data = await shrink(f); let last;
+          for (let t = 0; t < 3; t++) {
+            try {
+              const r = await fetch(`${API}/api/admin/upload`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ data }) });
+              const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Upload failed");
+              add.push({ src: j.url, cat: ncat, desc: ndesc }); last = null; break;
+            } catch (x) { last = x; await new Promise((ok) => setTimeout(ok, 700)); }
+          }
+          if (last) throw last;
         } catch { failed++; }
-        setMsg(`Uploading ${++done} of ${files.length}…`);
+        ++done; setBusy({ text: `Uploading photo ${Math.min(done + 1, files.length)} of ${files.length}…`, pct: (done / files.length) * 100 });
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    await Promise.all([worker(), worker()]);
+    setBusy({ text: "Saving to the gallery…", pct: 100 });
     if (add.length) await mutate((g) => { g.add = [...add, ...g.add]; }, `${add.length} photo(s) added and saved${failed ? `, ${failed} failed` : ""}.`);
-    else setMsg("Upload failed. Try again.");
+    else { setBusy(null); setMsg("Upload failed. Check your internet connection and try again."); }
   }
   const selP = sel && photos.find((p) => (p.raw || p.src) === sel);
   const close = useCallback(() => setOpen(-1), []);
@@ -110,7 +119,7 @@ export default function Gallery() {
 
   return (
     <>
-      {cropEl}
+      {cropEl}<Busy text={busy && busy.text} pct={busy && busy.pct} />
       {adm && (
         <div className="gedit" data-noedit>
           <strong>Gallery editing</strong>
@@ -149,7 +158,7 @@ export default function Gallery() {
           <button className="lb prev" onClick={(e) => { e.stopPropagation(); step(-1); }} aria-label="Previous">‹</button>
           <img src={list[open].src} alt="" onClick={(e) => e.stopPropagation()} />
           <button className="lb next" onClick={(e) => { e.stopPropagation(); step(1); }} aria-label="Next">›</button>
-          <div className="count">{list[open].desc} · {open + 1} / {list.length}</div>
+          <div className="count">{open + 1} / {list.length}</div>
         </div>
       )}
     </>

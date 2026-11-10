@@ -13,3 +13,5 @@ export default function useContent() {
   useEffect(() => { loadContent().then(setC); }, []);
   return c;
 }
+
+export const friendly = (e) => (!e || /failed to fetch|networkerror|load failed|network/i.test(e.message || "") ? "Could not reach the server. Check your internet connection and try again." : e.message);

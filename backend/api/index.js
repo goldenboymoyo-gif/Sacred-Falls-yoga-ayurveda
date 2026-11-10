@@ -5,11 +5,11 @@ const crypto = require("crypto");
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-const small = express.json({ limit: "20kb" }), big = express.json({ limit: "6mb" });
-app.use((req, res, next) => (req.path === "/api/admin/upload" ? big : small)(req, res, next));
-
 const origins = (process.env.ALLOWED_ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
+// CORS first, so even error responses (e.g. body too large) reach the browser instead of "Failed to fetch"
 app.use(cors({ origin: (o, cb) => cb(null, !o || origins.length === 0 || origins.includes(o)), methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] }));
+const small = express.json({ limit: "20kb" }), mid = express.json({ limit: "3mb" }), big = express.json({ limit: "6mb" });
+app.use((req, res, next) => (req.path === "/api/admin/upload" ? big : req.path === "/api/admin/content" ? mid : small)(req, res, next));
 
 const GH_API = process.env.GITHUB_API || "https://api.github.com";
 const cfg = () => ({ token: process.env.GITHUB_TOKEN, repo: process.env.GITHUB_REPO, branch: process.env.GITHUB_BRANCH || "main" });
@@ -336,7 +336,12 @@ app.post("/api/admin/upload", auth, ready, async (req, res) => {
   const ext = m[1] === "jpeg" ? "jpg" : m[1];
   const name = `${Date.now()}-${crypto.randomBytes(3).toString("hex")}.${ext}`;
   try {
-    const r = await ghFetch(`media/${name}`, { method: "PUT", headers: JSON_HDR, body: JSON.stringify({ message: "Upload " + name, branch: cfg().branch, content: m[2] }) });
+    let r;
+    for (let i = 0; i < 4; i++) { // GitHub answers 409 when two commits land at once: just retry
+      r = await ghFetch(`media/${name}`, { method: "PUT", headers: JSON_HDR, body: JSON.stringify({ message: "Upload " + name, branch: cfg().branch, content: m[2] }) });
+      if (r.ok || ![409, 422, 502, 503].includes(r.status)) break;
+      await new Promise((ok) => setTimeout(ok, 400 * (i + 1) + Math.random() * 400));
+    }
     if (!r.ok) throw new Error("GitHub " + r.status);
     res.json({ ok: true, url: `/api/media/${name}` });
   } catch (e) { fail(res, e); }
@@ -350,6 +355,11 @@ app.get("/api/media/:name", async (req, res) => {
     res.set({ "Content-Type": { jpg: "image/jpeg", png: "image/png", webp: "image/webp" }[n.split(".")[1]], "Cache-Control": "public, max-age=31536000, immutable", "Cross-Origin-Resource-Policy": "cross-origin" });
     res.send(Buffer.from(await r.arrayBuffer()));
   } catch { res.status(502).end(); }
+});
+
+app.use((err, req, res, next) => { // eslint-disable-line
+  const big = err && (err.type === "entity.too.large" || err.status === 413);
+  res.status(big ? 413 : (err && err.status) || 500).json({ error: big ? "That is too large to save in one go" : "Something went wrong, please try again" });
 });
 
 module.exports = app;

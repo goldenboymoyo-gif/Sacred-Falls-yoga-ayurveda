@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import base from "@/lib/gallery.json";
-import { mediaUrl } from "../useContent";
+import { mediaUrl, friendly } from "../useContent";
 import certBase from "@/lib/certs.json";
 import useCrop from "../Cropper";
+import Busy from "../Busy";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 const KEY = "sfAdminToken";
@@ -201,9 +202,9 @@ function GalleryAdmin({ api }) {
         const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, cat, desc });
       }
       if (add.length) { setC((p) => ({ ...p, gallery: { ...p.gallery, add: [...add, ...p.gallery.add] } })); show("ok", `${add.length} photo(s) added. Press Save changes to publish.`); }
-    } catch (er) { show("err", er.message); } finally { setBusy(false); }
+    } catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
-  const [prog, setProg] = useState("");
+  const [prog, setProg] = useState(null);
   const shrink = (f) => new Promise((res, rej) => {
     const im = new Image(), u = URL.createObjectURL(f);
     im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)); const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); res(cv.toDataURL("image/jpeg", 0.85)); };
@@ -214,36 +215,39 @@ function GalleryAdmin({ api }) {
   async function bulk(e) {
     const files = [...e.target.files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name)); e.target.value = "";
     if (!files.length) { show("err", "No images found in that selection."); return; }
-    setBusy(true); const add = []; let done = 0, failed = 0, i = 0;
+    setBusy(true); const add = []; let done = 0, failed = 0, i = 0; setProg({ text: `Uploading photo 1 of ${files.length}…`, pct: 3 });
     const worker = async () => {
       while (i < files.length) {
         const f = files[i++];
-        try { const data = await shrink(f); const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, cat, desc }); }
-        catch { failed++; }
-        setProg(`Uploading ${++done} of ${files.length}…`);
+        try {
+          const data = await shrink(f); let last;
+          for (let t = 0; t < 3; t++) { try { const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, cat, desc }); last = null; break; } catch (x) { last = x; await new Promise((ok) => setTimeout(ok, 700)); } }
+          if (last) throw last;
+        } catch { failed++; }
+        ++done; setProg({ text: `Uploading photo ${Math.min(done + 1, files.length)} of ${files.length}…`, pct: (done / files.length) * 100 });
       }
     };
     try {
-      await Promise.all([worker(), worker(), worker()]);
+      await Promise.all([worker(), worker()]); setProg({ text: "Saving to the gallery…", pct: 100 });
       if (add.length) {
         const next = { ...c, gallery: { ...c.gallery, add: [...add, ...c.gallery.add] } };
         const r = await api("content", { method: "PUT", body: { content: next } }); setC(r.content);
       }
       show(failed ? "err" : "ok", `${add.length} photo(s) added and saved${failed ? `, ${failed} failed (try those again)` : ""}.`);
-    } catch (er) { show("err", er.message); } finally { setBusy(false); setProg(""); }
+    } catch (er) { show("err", friendly(er)); } finally { setBusy(false); setProg(null); }
   }
   async function save() {
     setBusy(true);
-    try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The Gallery page will update shortly."); } catch (er) { show("err", er.message); } finally { setBusy(false); }
+    try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The Gallery page will update shortly."); } catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   const cur = sel && all.find((p) => p.src === sel);
   return (
     <>
-      {note}{cropEl}
+      {note}{cropEl}<Busy text={busy ? (prog ? prog.text : "Working…") : ""} pct={prog ? prog.pct : undefined} />
       <div className="admbar">
         <select value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select>
         <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description for new photos" maxLength={200} />
-        <label className="btn" style={{ cursor: "pointer" }}>{busy ? (prog || "Working…") : "Upload a folder"}<input type="file" accept="image/*" multiple hidden webkitdirectory="" directory="" onChange={bulk} disabled={busy} /></label>
+        <label className="btn" style={{ cursor: "pointer" }}>{busy ? "Working…" : "Upload a folder"}<input type="file" accept="image/*" multiple hidden webkitdirectory="" directory="" onChange={bulk} disabled={busy} /></label>
         <label className="btn" style={{ cursor: "pointer" }}>Upload many photos<input type="file" accept="image/*" multiple hidden onChange={bulk} disabled={busy} /></label>
         <label className="btn" style={{ cursor: "pointer" }}>Add photos (crop each)<input type="file" accept="image/*" multiple hidden onChange={upload} disabled={busy} /></label>
         <button className="btn" onClick={save} disabled={busy}>Save changes</button>
@@ -289,11 +293,11 @@ function CertAdmin({ api }) {
       const add = [];
       for (const f of files) { const data = await ask(f); if (!data) continue; const r = await api("upload", { method: "POST", body: { data } }); add.push({ src: r.url, title: "New certificate" }); }
       if (add.length) { put((o) => ({ ...o, add: [...add, ...o.add] })); show("ok", "Certificate added. Type its title, then press Save changes."); }
-    } catch (er) { show("err", er.message); } finally { setBusy(false); }
+    } catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   async function save() {
     setBusy(true);
-    try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The certificates will update shortly."); } catch (er) { show("err", er.message); } finally { setBusy(false); }
+    try { const r = await api("content", { method: "PUT", body: { content: c } }); setC(r.content); show("ok", "Saved. The certificates will update shortly."); } catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   return (
     <>
@@ -331,7 +335,7 @@ function Events({ api }) {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     setBusy(true);
     try { const data = await ask(f); if (!data) return; const r = await api("upload", { method: "POST", body: { data } }); set(i, "image", r.url); show("ok", "Poster added. Press Save changes to publish."); }
-    catch (er) { show("err", er.message); } finally { setBusy(false); }
+    catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   async function save() {
     setBusy(true);
@@ -382,7 +386,7 @@ function Settings({ api }) {
   async function save(e) {
     e.preventDefault(); setBusy(true);
     try { const r = await api("settings", { method: "PUT", body: { settings: s } }); setS(r.settings); show("ok", "Saved. The site will show the new details within a minute."); }
-    catch (er) { show("err", er.message); } finally { setBusy(false); }
+    catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   return (
     <form className="book" onSubmit={save} style={{ maxWidth: 560 }}>

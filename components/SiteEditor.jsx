@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { API, loadContent, mediaUrl } from "./useContent";
+import { API, loadContent, mediaUrl, friendly } from "./useContent";
+import Busy from "./Busy";
 import { nav } from "@/lib/site";
 import useCrop from "./Cropper";
 import usePicker from "./PhotoPicker";
@@ -201,7 +202,7 @@ export default function SiteEditor() {
       pending.current.img[it.key] = u; it.el.setAttribute("src", mediaUrl(u)); it.el.removeAttribute("srcset");
       if (it.key.startsWith("add|")) { const a = addedRef.current.find((x) => "add|" + x.id === it.key); if (a) a.src = u; }
       setDirty((d) => d + 1); setMsg("Photo ready. Press Save to publish.");
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(friendly(e)); }
   }
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   async function addPhotoBelow() {
@@ -210,7 +211,7 @@ export default function SiteEditor() {
       const u = await chooseImage(); if (!u) return;
       addedRef.current.push({ id: newId(), after: it.key, type: "img", src: u, text: "" });
       apply(); setDirty((d) => d + 1); setMsg("Photo added below. Press Save to publish.");
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(friendly(e)); }
   }
   function addTextBelow() {
     const it = need(); if (!it) return;
@@ -264,7 +265,7 @@ export default function SiteEditor() {
       content.current = (await r.json()).content; hideRef.current = new Set(content.current.hide); addedRef.current = JSON.parse(JSON.stringify(content.current.added || []));
       pending.current = { text: {}, img: {} };
       setDirty(0); setMsg("Saved. Visitors see it within about a minute.");
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(friendly(e)); }
   }
 
   if (!token) return null;
@@ -272,7 +273,7 @@ export default function SiteEditor() {
   if (!edit) return <button className="sfbar sffab" onClick={() => setEdit(true)}>Edit this page</button>;
   return (
     <>
-    {cropEl}{pickEl}
+    {cropEl}{pickEl}<Busy text={/^(Uploading|Saving)/.test(msg) ? msg : ""} />
     <div className="sfbar">
       <select value={nav.some((n) => n.href === path) ? path : ""} onChange={(e) => go(e.target.value)} aria-label="Go to page">
         {!nav.some((n) => n.href === path) && <option value="">Page…</option>}
