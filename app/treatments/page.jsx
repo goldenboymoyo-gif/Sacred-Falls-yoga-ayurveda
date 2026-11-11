@@ -2,7 +2,7 @@ import Link from "next/link";
 import ReadMore from "@/components/ReadMore";
 import PageHead from "@/components/PageHead";
 import Fig from "@/components/Fig";
-export const metadata = { title: "Treatments & Chavutti Uzhichil", description: "Ayurvedic treatments and traditional Kerala Chavutti Uzhichil bodywork with Sara Norton in Victoria Falls." };
+export const metadata = { title: "Chavutti Uzhichil and Ayurvedic Treatments in Victoria Falls", description: "Traditional Kerala Chavutti Uzhichil bodywork and warm herbal oil Ayurvedic treatments with Sara Norton in Victoria Falls, Zimbabwe. What happens, training and how to book." };
 export default function Page() {
   return (<>
     <PageHead eyebrow="Hands-on therapies" title="Treatments & Chavutti Uzhichil" />
@@ -30,6 +30,16 @@ export default function Page() {
         <p>Sara trained in this traditional Kalarippayattu bodywork practice at CVN Kalari Nadakav in Calicut, India. Her treatment honours its martial-arts lineage while being adapted thoughtfully to the individual.</p>
         <Link className="btn" href="/contact#book">Book a treatment</Link>
       </ReadMore>
+    </div></section>
+    <section id="practical"><div className="wrap narrow">
+      <h2>Practical details and booking</h2>
+      <dl className="facts">
+        <div><dt>Where</dt><dd><a className="textlink" href="https://www.thearthousevictoriafalls.com/" target="_blank" rel="noopener noreferrer">The Art House</a>, 360 Gibson Road, Victoria Falls, by appointment.</dd></div>
+        <div><dt>Before you book</dt><dd>Please tell Sara about any injuries, pregnancy or medical conditions so the treatment can be adapted safely. Treatments support wellbeing and do not replace medical care.</dd></div>
+        <div><dt>How to book</dt><dd>Use the <Link className="textlink" href="/contact#book">booking form</Link>, or call or WhatsApp +263 77 260 6233.</dd></div>
+      </dl>
+      <div className="row"><Link className="btn" href="/contact#book">Book a treatment</Link></div>
+      <p className="related">Related: <Link className="textlink" href="/ayurveda">Ayurveda consultations</Link> · <Link className="textlink" href="/yoga-therapy">Yoga Therapy</Link> · <Link className="textlink" href="/retreats">Retreats</Link></p>
     </div></section>
   </>);
 }

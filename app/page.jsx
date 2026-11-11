@@ -45,7 +45,7 @@ const offerings = [
       "Time and space to step away from daily life and return to what is essential. Ayurveda, yoga, yoga therapy, nourishing food, meditation and nature, held within Zimbabwe and worldwide.",
       "Selected retreats can be combined with safari experiences in the wilderness of Africa.",
     ],
-    cta: "See what's coming up",
+    cta: "Enquire about retreats",
   },
 ];
 
@@ -55,21 +55,31 @@ export default function Home() {
       <section className="hero2">
         <div className="wrap hero2grid">
           <div className="herotext">
-            <p className="script brand">Sacred Falls Ayurveda and Yoga</p>
-            <h1 className="tagline">Return to your natural rhythm</h1>
-            <p>Sacred Falls Ayurveda and Yoga offers a gentle, practical path towards greater balance, vitality and ease. Drawing on the ancient wisdom of Ayurveda and Yoga Therapy, Sara Norton supports each person to understand their unique constitution and create nourishing, sustainable practices for everyday life.</p>
-            <p className="hide-m">Through personalised consultations, yoga therapy, workshops, retreats and wholesome food, you are invited to reconnect with the intelligence of your body, mind and spirit.</p>
-            <p className="script big">Begin where you are. Restore what is needed. Live in greater harmony.</p>
+            <p className="eyebrow herohere">Victoria Falls, Zimbabwe</p>
+            <h1 className="bizname">Sacred Falls Ayurveda and Yoga</h1>
+            <p className="script tagline">Return to your natural rhythm</p>
+            <p className="lead">Ayurveda consultations, yoga therapy, traditional treatments and wellness retreats in Victoria Falls, Zimbabwe.</p>
+            <p>A gentle, practical path towards greater balance, vitality and ease, with Sara Norton.</p>
             <div className="row">
               <Link className="btn" href="/contact#book">Book a consultation</Link>
-              <Link className="textlink" href="#offerings">Explore our offerings</Link>
+              <Link className="btn ghost" href="/retreats#enquire">Enquire about retreats</Link>
             </div>
           </div>
-          <div className="collage">
-            <img className="arch" src="/images/yoga-pose.jpg" alt="Triangle pose on a yoga mat in the garden" />
-            <img className="print p1" src="/images/chav3.jpg" alt="Sara practising Chavutti Uzhichil, holding the ropes" />
-            <img className="print p2" src="/images/consult.jpg" alt="A consultation in conversation" />
+          <div className="leadphotos">
+            <img className="leadimg" src="/images/yoga-pose.jpg" alt="Triangle pose on a yoga mat in the garden" />
+            <div className="supp">
+              <img src="/images/chav3.jpg" alt="Sara practising Chavutti Uzhichil, holding the ropes" />
+              <img src="/images/consult.jpg" alt="A consultation in conversation" />
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section className="introband">
+        <div className="wrap narrow center">
+          <p>Drawing on the ancient wisdom of Ayurveda and Yoga Therapy, Sara Norton supports each person to understand their unique constitution and create nourishing, sustainable practices for everyday life. Through personalised consultations, yoga therapy, workshops, retreats and wholesome food, you are invited to reconnect with the intelligence of your body, mind and spirit.</p>
+          <p className="script big">Begin where you are. Restore what is needed. Live in greater harmony.</p>
+          <p className="findus">Sessions are held at <strong>The Art House</strong>, 360 Gibson Road, Victoria Falls. <a className="btn ghost" href="https://www.thearthousevictoriafalls.com/" target="_blank" rel="noopener noreferrer">Visit The Art House website</a></p>
         </div>
       </section>
 
@@ -87,7 +97,7 @@ export default function Home() {
         <div className="wrap narrow" style={{ marginTop: 36 }}>
           <h3>Training and Qualifications</h3>
           <ul className="list">
-            <li>Qualified Ayurveda Practitioner</li><li>Qualified Yoga Teacher</li><li>Qualified Yoga Therapist</li><li>Training in many different schools in Rishikesh and Kerala, India</li>
+            <li>Qualified Ayurveda Practitioner</li><li>Qualified Yoga Teacher</li><li>Qualified Yoga Therapist</li><li>Training in many different schools in Rishikesh and Kerala, India</li><li>Chavutti Uzhichil training at CVN Kalari Nadakav, Calicut, India</li>
           </ul>
           <Certificates />
         </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ReadMore from "@/components/ReadMore";
 import PageHead from "@/components/PageHead";
-export const metadata = { title: "Food as Nourishment", description: "Simple, seasonal Ayurvedic food and the From Our Kitchen recipe book." };
+export const metadata = { title: "Ayurvedic Food and the From Our Kitchen Recipe Book", description: "Simple, seasonal, tri-dosha balanced Ayurvedic food and recipes from Sara Norton, gathered in the recipe book From Our Kitchen." };
 export default function Page() {
   return (<>
     <PageHead eyebrow="Food" title="Food as Nourishment" />

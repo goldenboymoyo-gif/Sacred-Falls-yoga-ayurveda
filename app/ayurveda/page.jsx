@@ -2,7 +2,7 @@ import Link from "next/link";
 import ReadMore from "@/components/ReadMore";
 import PageHead from "@/components/PageHead";
 import Fig from "@/components/Fig";
-export const metadata = { title: "Ayurveda Consultations", description: "Personal Ayurveda consultations with Sara Norton in Victoria Falls and online." };
+export const metadata = { title: "Ayurveda Consultations in Victoria Falls", description: "Personal Ayurveda consultations with Sara Norton, a qualified Ayurveda practitioner, in Victoria Falls, Zimbabwe, or online. Prices, what to expect and how to book." };
 export default function Page() {
   return (<>
     <PageHead eyebrow="Ayurveda" title="Personal Ayurveda Consultations" />
@@ -26,7 +26,20 @@ export default function Page() {
      </ReadMore>
      <img className="photo" src="/images/treatment.jpg" alt="Warm herbal oil used in an Ayurvedic treatment" loading="lazy" />
     </div></section>
-    <section className="alt" id="food"><div className="wrap narrow">
+    <section className="alt" id="expect"><div className="wrap narrow">
+      <h2>What to expect</h2>
+      <dl className="facts">
+        <div><dt>What is included</dt><dd>A relaxed conversation about your constitution, digestion, sleep, energy, daily routine and relationship with food, followed by practical, personal recommendations on food, daily rhythm and seasonal self care.</dd></div>
+        <div><dt>How long it takes</dt><dd>An initial consultation can take up to 90 minutes. Follow-up sessions are shorter.</dd></div>
+        <div><dt>Cost</dt><dd>An initial consultation is $60. Follow-ups are $40.</dd></div>
+        <div><dt>Who it suits</dt><dd>Anyone who would like to understand their own nature and care for themselves with more confidence. Ayurveda complements, and does not replace, medical care. Please keep seeing your doctor for any medical condition.</dd></div>
+        <div><dt>Follow-up</dt><dd>Follow-up sessions, in person or online, are available to review how you are getting on and adjust your recommendations.</dd></div>
+        <div><dt>How to enquire</dt><dd>Use the <Link className="textlink" href="/contact#book">booking form</Link>, or call or WhatsApp +263 77 260 6233. In-person sessions are held at <a className="textlink" href="https://www.thearthousevictoriafalls.com/" target="_blank" rel="noopener noreferrer">The Art House</a>, 360 Gibson Road, Victoria Falls.</dd></div>
+      </dl>
+      <div className="row"><Link className="btn" href="/contact#book">Book a consultation</Link></div>
+      <p className="related">Related: <Link className="textlink" href="/yoga-therapy">Yoga Therapy</Link> · <Link className="textlink" href="/treatments">Treatments</Link> · <Link className="textlink" href="/food">Food and recipes</Link> · <Link className="textlink" href="/retreats">Retreats</Link></p>
+    </div></section>
+    <section id="food"><div className="wrap narrow">
       <span className="eyebrow">The heart of Ayurveda</span>
       <h2>Food and Nutrition</h2>
       <div className="chgrid">
