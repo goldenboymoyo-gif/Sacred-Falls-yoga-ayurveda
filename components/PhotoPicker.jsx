@@ -4,7 +4,7 @@ import base from "@/lib/gallery.json";
 import { loadContent, mediaUrl } from "./useContent";
 
 const alias = { Gatherings: "In class", Tea: "Nutrition" };
-const CATS = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
+const CATS = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations", "Training in India"];
 
 function Picker({ onDone, multi }) {
   const [cat, setCat] = useState("All");

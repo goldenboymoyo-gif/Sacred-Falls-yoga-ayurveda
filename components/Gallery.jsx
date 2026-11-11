@@ -6,7 +6,7 @@ import useCrop from "./Cropper";
 import Busy from "./Busy";
 import { shrinkFile } from "@/lib/img";
 
-const cats = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
+const cats = ["All", "Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations", "Training in India"];
 const alias = { Gatherings: "In class", Tea: "Nutrition" };
 const DESC = {
   Yoga: "Yoga practice with Sara Norton",
@@ -16,6 +16,7 @@ const DESC = {
   Chavutti: "Chavutti Uzhichil, traditional Kerala bodywork using warm oil and foot pressure",
   Treatments: "An Ayurvedic treatment using warm herbal oil",
   Consultations: "An Ayurveda consultation with Sara",
+  "Training in India": "Sara's training in Rishikesh and Kerala, India",
 };
 
 export default function Gallery() {

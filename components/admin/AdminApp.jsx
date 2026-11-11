@@ -174,7 +174,7 @@ function BookingForm({ init, onSave, onCancel }) {
   );
 }
 
-const CATS = ["Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations"];
+const CATS = ["Yoga", "In class", "In nature", "Nutrition", "Chavutti", "Treatments", "Consultations", "Training in India"];
 const GALIAS = { Gatherings: "In class", Tea: "Nutrition" };
 function GalleryAdmin({ api }) {
   const [c, setC] = useState(null);
