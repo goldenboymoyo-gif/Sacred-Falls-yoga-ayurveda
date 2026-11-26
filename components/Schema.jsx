@@ -17,7 +17,7 @@ export default function Schema() {
   if (path.startsWith("/admin")) return null;
   const biz = {
     "@type": ["HealthAndBeautyBusiness", "LocalBusiness"], "@id": BASE + "/#business",
-    name: site.name, url: BASE + "/", telephone: site.phone, image: BASE + "/images/hero.jpg", logo: BASE + "/logo.png",
+    name: site.name, url: BASE + "/", telephone: site.phone, image: BASE + "/og.jpg", logo: BASE + "/logo.png",
     description: "Ayurveda consultations, yoga therapy, traditional treatments and wellness retreats in Victoria Falls, Zimbabwe.",
     address: { "@type": "PostalAddress", streetAddress: "360 Gibson Road", addressLocality: "Victoria Falls", addressCountry: "ZW" },
     areaServed: ["Victoria Falls", "Zimbabwe"], founder: { "@id": BASE + "/#sara" }, sameAs: [ART],

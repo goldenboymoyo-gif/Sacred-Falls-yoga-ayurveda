@@ -5,7 +5,7 @@ import { mediaUrl, friendly } from "../useContent";
 import certBase from "@/lib/certs.json";
 import useCrop from "../Cropper";
 import Busy from "../Busy";
-import { shrinkFile } from "@/lib/img";
+import { shrinkFile, hashUrl, hamming } from "@/lib/img";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 const KEY = "sfAdminToken";
@@ -206,6 +206,24 @@ function GalleryAdmin({ api }) {
     } catch (er) { show("err", friendly(er)); } finally { setBusy(false); }
   }
   const [prog, setProg] = useState(null);
+  // find photos that appear more than once (same picture uploaded again) and remove the extra copies
+  async function dedupe() {
+    setBusy(true);
+    try {
+      const order = [...all.filter((p) => !p.added), ...all.filter((p) => p.added).reverse()]; // keep the original / oldest copy
+      const seen = []; const drop = []; let bad = 0;
+      for (let i = 0; i < order.length; i++) {
+        setProg({ text: `Checking photo ${i + 1} of ${order.length} for repeats…`, pct: ((i + 1) / order.length) * 100 });
+        const h = await hashUrl(mediaUrl(order[i].src));
+        if (!h) { bad++; continue; }
+        if (seen.some((x) => hamming(x, h) <= 6)) drop.push(order[i]); else seen.push(h);
+      }
+      if (!drop.length) { show("ok", `No repeats found${bad ? ` (${bad} photo(s) could not be checked)` : ""}.`); return; }
+      const dropAdded = new Set(drop.filter((p) => p.added).map((p) => p.src)), dropBase = drop.filter((p) => !p.added).map((p) => p.src);
+      setC((o) => ({ ...o, gallery: { ...o.gallery, add: o.gallery.add.filter((a) => !dropAdded.has(a.src)), remove: [...o.gallery.remove, ...dropBase] } }));
+      show("ok", `${drop.length} repeated photo(s) removed from the list. Press Save changes to publish.`);
+    } catch (er) { show("err", friendly(er)); } finally { setBusy(false); setProg(null); }
+  }
   const shrink = shrinkFile;
   // many photos / a whole folder, no cropping, saved automatically
   async function bulk(e) {
@@ -244,6 +262,7 @@ function GalleryAdmin({ api }) {
         <select value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select>
         <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description for new photos" maxLength={200} />
         <label className="btn" style={{ cursor: "pointer" }}>{busy ? "Working…" : "Upload a folder"}<input type="file" accept="image/*" multiple hidden webkitdirectory="" directory="" onChange={bulk} disabled={busy} /></label>
+        <button type="button" className="btn ghost" onClick={dedupe} disabled={busy}>Remove repeated photos</button>
         <label className="btn" style={{ cursor: "pointer" }}>Upload many photos<input type="file" accept="image/*" multiple hidden onChange={bulk} disabled={busy} /></label>
         <label className="btn" style={{ cursor: "pointer" }}>Add photos (crop each)<input type="file" accept="image/*" multiple hidden onChange={upload} disabled={busy} /></label>
         <button className="btn" onClick={save} disabled={busy}>Save changes</button>
